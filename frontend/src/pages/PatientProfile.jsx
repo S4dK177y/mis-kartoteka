@@ -136,7 +136,7 @@ export default function PatientProfile() {
           </div>
         </div>
         
-        <div className="flex gap-2">
+        <div className="flex gap-2" style={{ flexWrap: 'wrap' }}>
           {patient.status === 'На лечении' && (
             <>
               <button className="btn btn-outline" style={{ color: 'var(--primary-hover)', borderColor: 'var(--primary-light)' }} onClick={() => { setShowTransfer(!showTransfer); setShowDischarge(false); }}>
@@ -188,7 +188,7 @@ export default function PatientProfile() {
       )}
 
       {showDischarge && (
-        <div className="card p-4 mb-4 animate-fade-in" style={{ border: '2px solid var(--secondary-light)' }}>
+        <div className="card p-4 mb-4 animate-fade-in" style={{ border: '2px solid var(--secondary-light)', overflow: 'visible', zIndex: 10, position: 'relative' }}>
           <h3 className="text-lg mb-3">Оформление выписки / перевода</h3>
           <div className="grid-2">
             <div className="input-group">

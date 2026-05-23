@@ -43,10 +43,7 @@ export default function PatientForm() {
   });
   
   const [admissionDate, setAdmissionDate] = useState(new Date());
-  // We handle birthDate manually to use masking easily if datepicker customInput acts up, 
-  // but datepicker has issues with strict masks sometimes. 
-  // Let's use string state for the mask.
-  const [birthDateString, setBirthDateString] = useState('');
+  const [birthDate, setBirthDate] = useState(null);
 
   const [loading, setLoading] = useState(isEditing);
 
@@ -78,10 +75,7 @@ export default function PatientForm() {
       setAdmissionDate(new Date(data.admissionDate));
       
       const bd = new Date(data.birthDate);
-      const d = String(bd.getDate()).padStart(2, '0');
-      const m = String(bd.getMonth() + 1).padStart(2, '0');
-      const y = bd.getFullYear();
-      setBirthDateString(`${d}.${m}.${y}`);
+      setBirthDate(isNaN(bd.getTime()) ? null : bd);
     } catch (error) {
       console.error(error);
       alert('Ошибка при загрузке данных пациента');
@@ -95,22 +89,19 @@ export default function PatientForm() {
     const name = target.name;
     const value = target.type === 'checkbox' ? target.checked : target.value;
     
-    // Token validation enforcing upper case and pattern A-0000 / AA-00000
+    // Token validation enforcing upper case
     if (name === 'tokenNumber') {
-      let val = value.toUpperCase();
-      val = val.replace(/[^А-ЯA-Z0-9-]/g, '');
-      setFormData(prev => ({ ...prev, [name]: val }));
+      setFormData(prev => ({ ...prev, [name]: value.toUpperCase() }));
       return;
     }
-    // Custom Date Mask (DD.MM.YYYY)
-    if (name === 'birthDateString') {
-      let val = value.replace(/\D/g, ''); // keep only digits
-      if (val.length > 8) val = val.substring(0, 8);
-      let formatted = '';
-      if (val.length > 0) formatted += val.substring(0, 2);
-      if (val.length > 2) formatted += '.' + val.substring(2, 4);
-      if (val.length > 4) formatted += '.' + val.substring(4, 8);
-      setBirthDateString(formatted);
+    
+    // Reset SVO when switching to Призыв
+    if (name === 'militaryStatus') {
+      if (value === 'Призыв') {
+        setFormData(prev => ({ ...prev, [name]: value, isSvoParticipant: false }));
+      } else {
+        setFormData(prev => ({ ...prev, [name]: value }));
+      }
       return;
     }
 
@@ -120,31 +111,16 @@ export default function PatientForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Parse birth date
-    const parts = birthDateString.split('.');
-    if (parts.length !== 3 || parts[2].includes('_')) {
-      alert("Пожалуйста, введите корректную дату рождения (ДД.ММ.ГГГГ)");
+    if (!birthDate) {
+      alert("Пожалуйста, введите корректную дату рождения");
       return;
-    }
-    const parsedBd = new Date(`${parts[2]}-${parts[1]}-${parts[0]}T00:00:00Z`);
-    if (isNaN(parsedBd.getTime())) {
-      alert("Некорректная дата рождения");
-      return;
-    }
-
-    if (formData.tokenNumber) {
-      const tokenRegex = /^[А-ЯA-Z]{1,2}-\d+$/;
-      if (!tokenRegex.test(formData.tokenNumber)) {
-        alert("Жетон должен быть в формате 'А-000000' или 'АА-000000'");
-        return;
-      }
     }
 
     try {
       const submissionData = {
         ...formData,
         admissionDate: admissionDate.toISOString(),
-        birthDate: parsedBd.toISOString()
+        birthDate: birthDate.toISOString()
       };
 
       if (isEditing) {
@@ -180,14 +156,16 @@ export default function PatientForm() {
             </div>
             <div className="input-group">
               <label className="input-label">Дата рождения *</label>
-              <input
-                type="text"
-                name="birthDateString"
-                value={birthDateString}
-                onChange={handleChange}
-                placeholder="ДД.ММ.ГГГГ"
+              <DatePicker
+                selected={birthDate}
+                onChange={(date) => setBirthDate(date)}
+                dateFormat="dd.MM.yyyy"
+                locale={ru}
+                showYearDropdown
+                showMonthDropdown
+                dropdownMode="select"
                 className="input-field"
-                maxLength="10"
+                placeholderText="ДД.ММ.ГГГГ"
                 required
               />
             </div>
@@ -227,8 +205,9 @@ export default function PatientForm() {
             </div>
             
             {formData.militaryStatus === 'Контракт' && (
-              <div className="input-group mt-2">
-                <label className="flex items-center gap-2 cursor-pointer">
+              <div className="input-group">
+                <label className="input-label" style={{ visibility: 'hidden' }}>Выравнивание</label>
+                <label className="flex items-center gap-2 cursor-pointer mt-2">
                   <input type="checkbox" name="isSvoParticipant" checked={formData.isSvoParticipant} onChange={handleChange} />
                   <span style={{ fontWeight: 600, color: 'var(--danger)' }}>Участник СВО</span>
                 </label>

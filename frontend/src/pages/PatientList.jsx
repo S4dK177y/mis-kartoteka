@@ -18,7 +18,22 @@ export default function PatientList() {
   const [diagnosisFilter, setDiagnosisFilter] = useState('');
   
   // Sorting
-  const [sortAlpha, setSortAlpha] = useState(false); 
+  const [sortField, setSortField] = useState('admissionDate'); 
+  const [sortOrder, setSortOrder] = useState('desc');
+
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortOrder('asc');
+    }
+  };
+
+  const SortIcon = ({ field }) => {
+    if (sortField !== field) return <SortAsc size={12} style={{opacity: 0.3, cursor: 'pointer'}} />;
+    return <SortAsc size={12} style={{transform: sortOrder === 'desc' ? 'rotate(180deg)' : 'none', color: 'var(--primary)', cursor: 'pointer', transition: 'transform 0.2s'}} />;
+  };
 
   useEffect(() => {
     fetchPatients();
@@ -60,9 +75,21 @@ export default function PatientList() {
       return true;
     });
 
-    if (sortAlpha) {
-      result.sort((a, b) => a.fullName.localeCompare(b.fullName));
-    }
+    result.sort((a, b) => {
+      let valA = a[sortField];
+      let valB = b[sortField];
+      
+      if (sortField === 'fullName' || sortField === 'department') {
+        valA = valA || '';
+        valB = valB || '';
+        return sortOrder === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+      } else if (sortField === 'admissionDate') {
+        valA = new Date(valA).getTime();
+        valB = new Date(valB).getTime();
+        return sortOrder === 'asc' ? valA - valB : valB - valA;
+      }
+      return 0;
+    });
 
     return result;
   };
@@ -87,13 +114,6 @@ export default function PatientList() {
         </div>
         
         <div className="flex gap-2">
-          <button 
-            className="btn btn-outline" 
-            onClick={() => setSortAlpha(!sortAlpha)}
-            title="Сортировка"
-          >
-            {sortAlpha ? <><SortAsc size={16}/> Алфавит</> : <><Filter size={16}/> Дата</>}
-          </button>
           <a href={api.exportPatientsUrl} className="btn btn-outline" download>
             <Download size={16} />
             Экспорт
@@ -136,10 +156,18 @@ export default function PatientList() {
                     />
                   </div>
                 </th>
-                <th>ФИО</th>
                 <th>
                   <div className="flex-col gap-1">
-                    <span>Отделение</span>
+                    <span className="flex items-center gap-1 cursor-pointer select-none hover:text-primary" onClick={() => handleSort('fullName')}>
+                      ФИО <SortIcon field="fullName" />
+                    </span>
+                  </div>
+                </th>
+                <th>
+                  <div className="flex-col gap-1">
+                    <span className="flex items-center gap-1 cursor-pointer select-none hover:text-primary" onClick={() => handleSort('department')}>
+                      Отделение <SortIcon field="department" />
+                    </span>
                     <select 
                       value={departmentFilter} 
                       onChange={e => setDepartmentFilter(e.target.value)}
@@ -164,7 +192,13 @@ export default function PatientList() {
                     />
                   </div>
                 </th>
-                <th>Поступление</th>
+                <th>
+                  <div className="flex-col gap-1">
+                    <span className="flex items-center gap-1 cursor-pointer select-none hover:text-primary" onClick={() => handleSort('admissionDate')}>
+                      Поступление <SortIcon field="admissionDate" />
+                    </span>
+                  </div>
+                </th>
                 <th style={{ width: '120px' }}>
                   <div className="flex-col gap-1">
                     <span>Статус</span>
@@ -188,7 +222,18 @@ export default function PatientList() {
                   <td className="text-muted" style={{ fontSize: '0.75rem', fontWeight: 500 }}>{patient.caseHistoryNumber || '—'}</td>
                   <td className="text-muted" style={{ fontSize: '0.75rem', fontWeight: 500 }}>{patient.tokenNumber || '—'}</td>
                   <td style={{ fontWeight: 600, color: 'var(--primary-hover)' }}>
-                    {patient.fullName}
+                    <div className="flex items-center gap-2">
+                      <span>{patient.fullName}</span>
+                      {patient.militaryStatus === 'Контракт' && patient.isSvoParticipant && (
+                        <span className="badge" style={{ background: 'var(--danger-light)', color: 'var(--danger)', fontSize: '0.6rem', padding: '0.1rem 0.3rem', flexShrink: 0 }}>СВО</span>
+                      )}
+                      {patient.militaryStatus === 'Контракт' && !patient.isSvoParticipant && (
+                        <span className="badge" style={{ background: 'var(--primary-light)', color: 'var(--primary)', fontSize: '0.6rem', padding: '0.1rem 0.3rem', flexShrink: 0 }}>КОНТРАКТ</span>
+                      )}
+                      {patient.militaryStatus === 'Призыв' && (
+                        <span className="badge" style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', color: 'var(--text)', fontSize: '0.6rem', padding: '0.1rem 0.3rem', flexShrink: 0 }}>ПРИЗЫВ</span>
+                      )}
+                    </div>
                     {(patient.rank || patient.militaryUnit) && (
                       <div className="text-muted mt-1" style={{ fontSize: '0.7rem', fontWeight: 400 }}>
                         {patient.rank && <span>{patient.rank}</span>}

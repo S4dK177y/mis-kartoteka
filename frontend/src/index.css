@@ -310,11 +310,15 @@ tbody tr:hover {
 .badge-active {
   background: var(--primary-light);
   color: var(--primary-hover);
+  min-width: 90px;
+  justify-content: center;
 }
 
 .badge-archived {
   background: var(--border-light);
   color: var(--text-muted);
+  min-width: 90px;
+  justify-content: center;
 }
 
 .badge-success {
