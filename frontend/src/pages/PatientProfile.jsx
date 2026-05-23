@@ -14,6 +14,7 @@ export default function PatientProfile() {
   const [patient, setPatient] = useState(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   
   const [showTransfer, setShowTransfer] = useState(false);
   const [showDischarge, setShowDischarge] = useState(false);
@@ -71,7 +72,34 @@ export default function PatientProfile() {
       alert('Ошибка при загрузке файла');
     } finally {
       setUploading(false);
-      e.target.value = null; 
+      if (e.target) e.target.value = null; 
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      setUploading(true);
+      try {
+        await api.uploadDocument(id, file);
+        await fetchPatient();
+      } catch (error) {
+        alert('Ошибка при загрузке файла');
+      } finally {
+        setUploading(false);
+      }
     }
   };
 
@@ -115,21 +143,23 @@ export default function PatientProfile() {
 
   return (
     <div className="animate-fade-in" style={{ maxWidth: '1200px', margin: '0 auto' }}>
-      <div className="flex justify-between items-center mb-4 flex-wrap gap-4">
+      <div className="flex-col gap-3 mb-4">
         <div className="flex items-center gap-3">
           <button className="btn btn-icon btn-outline" onClick={() => navigate('/')}>
             <ArrowLeft size={16} />
           </button>
           <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-xl m-0">{patient.fullName}</h2>
-              {patient.isSvoParticipant && (
-                <span className="badge badge-active" style={{ background: '#fef2f2', color: '#ef4444', border: '1px solid #fca5a5', padding: '0.1rem 0.4rem', fontSize: '0.65rem' }}>СВО</span>
-              )}
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-xl m-0 flex items-center gap-2">
+                {patient.fullName}
+                {patient.militaryStatus === 'Контракт' && patient.isSvoParticipant && (
+                  <span className="badge badge-active" style={{ background: '#fef2f2', color: '#ef4444', border: '1px solid #fca5a5', padding: '0.1rem 0.4rem', fontSize: '0.65rem' }}>СВО</span>
+                )}
+              </h2>
             </div>
             <div className="text-muted text-sm flex gap-3 mt-1 flex-wrap">
-              {patient.tokenNumber && <span>Ж: {patient.tokenNumber}</span>}
               {patient.caseHistoryNumber && <span>ИБ: {patient.caseHistoryNumber}</span>}
+              {patient.tokenNumber && <span>Ж: {patient.tokenNumber}</span>}
               {patient.rank && <span>Зв: {patient.rank}</span>}
               {patient.militaryStatus && <span>Статус: {patient.militaryStatus}</span>}
             </div>
@@ -247,9 +277,12 @@ export default function PatientProfile() {
               </div>
               <div className="flex justify-between border-b pb-1">
                 <span className="text-muted">Статус:</span>
-                <span className={`badge ${patient.status === 'На лечении' ? 'badge-active' : 'badge-archived'}`}>
-                  {patient.status}
-                </span>
+                <div className="flex items-center gap-1">
+                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: patient.status === 'На лечении' ? 'var(--primary)' : 'var(--text-muted)' }}></div>
+                  <span style={{ fontWeight: 600, color: patient.status === 'На лечении' ? 'var(--primary-hover)' : 'var(--text-muted)' }}>
+                    {patient.status}
+                  </span>
+                </div>
               </div>
               <div className="flex-col pb-1 border-b">
                 <span className="text-muted mb-1">Поступил:</span>
@@ -330,22 +363,37 @@ export default function PatientProfile() {
         {/* Right Column: Files */}
         <div className="card flex-col" style={{ gridColumn: 'span 1', maxHeight: '600px' }}>
           <div className="p-4" style={{ borderBottom: '1px solid var(--border)' }}>
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg m-0 text-primary">Файлы</h3>
-              <div>
-                <input type="file" id="file-upload" style={{ display: 'none' }} onChange={handleFileUpload} disabled={uploading}/>
-                <label htmlFor="file-upload" className="btn btn-outline btn-icon" style={{ cursor: 'pointer', padding: '0.3rem' }} title="Загрузить">
-                  <Upload size={14} />
-                </label>
-              </div>
-            </div>
+            <h3 className="text-lg m-0 text-primary">Файлы</h3>
           </div>
 
           <div className="p-3 flex-col gap-2" style={{ flex: 1, overflowY: 'auto' }}>
+            <div 
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              style={{
+                border: isDragging ? '2px dashed var(--primary)' : '2px dashed var(--border-light)',
+                background: isDragging ? 'var(--primary-light)' : 'var(--bg-input)',
+                borderRadius: 'var(--radius-md)',
+                padding: '1.5rem 1rem',
+                textAlign: 'center',
+                transition: 'all 0.2s',
+                marginBottom: '0.5rem'
+              }}
+            >
+              <input type="file" id="file-upload" style={{ display: 'none' }} onChange={handleFileUpload} disabled={uploading}/>
+              <label htmlFor="file-upload" style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                <Upload size={24} style={{ color: isDragging ? 'var(--primary)' : 'var(--text-muted)' }} />
+                <span className="text-sm text-muted">
+                  {uploading ? 'Загрузка...' : 'Перетащите файл сюда или нажмите для выбора'}
+                </span>
+              </label>
+            </div>
+
             {patient.documents.length === 0 ? (
               <div className="text-center text-muted p-4">
                 <FileText size={24} className="mx-auto mb-1 opacity-50" />
-                <p className="text-xs">Нет файлов</p>
+                <p className="text-xs">Нет загруженных файлов</p>
               </div>
             ) : (
               patient.documents.map(doc => (

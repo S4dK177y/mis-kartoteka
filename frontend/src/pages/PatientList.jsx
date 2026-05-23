@@ -14,7 +14,7 @@ export default function PatientList() {
   const [departmentFilter, setDepartmentFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [ibFilter, setIbFilter] = useState('');
-  const [tokenFilter, setTokenFilter] = useState('');
+
   const [diagnosisFilter, setDiagnosisFilter] = useState('');
   
   // Sorting
@@ -56,16 +56,15 @@ export default function PatientList() {
 
   const getFilteredPatients = () => {
     let result = patients.filter(p => {
-      // General Text Search (Full Name mostly, since others have specific filters now, but keep for convenience)
+      // General Text Search (Full Name and IB)
       const searchStr = search.toLowerCase();
-      if (searchStr && !p.fullName.toLowerCase().includes(searchStr)) return false;
+      if (searchStr && !p.fullName.toLowerCase().includes(searchStr) && !(p.caseHistoryNumber && p.caseHistoryNumber.toLowerCase().includes(searchStr))) return false;
 
       // Specific Filters
       if (departmentFilter && p.department !== departmentFilter) return false;
       if (statusFilter && p.status !== statusFilter) return false;
       
       if (ibFilter && (!p.caseHistoryNumber || !p.caseHistoryNumber.toLowerCase().includes(ibFilter.toLowerCase()))) return false;
-      if (tokenFilter && (!p.tokenNumber || !p.tokenNumber.toLowerCase().includes(tokenFilter.toLowerCase()))) return false;
       
       if (diagnosisFilter) {
         const diagStr = getDisplayDiagnosis(p).toLowerCase();
@@ -79,7 +78,7 @@ export default function PatientList() {
       let valA = a[sortField];
       let valB = b[sortField];
       
-      if (sortField === 'fullName' || sortField === 'department') {
+      if (sortField === 'fullName' || sortField === 'department' || sortField === 'caseHistoryNumber') {
         valA = valA || '';
         valB = valB || '';
         return sortOrder === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
@@ -105,7 +104,7 @@ export default function PatientList() {
             <input 
               type="text" 
               className="input-field" 
-              placeholder="Поиск по ФИО пациента..."
+              placeholder="Поиск по ФИО или № ИБ..."
               style={{ paddingLeft: '36px', marginBottom: 0, width: '100%' }}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -132,7 +131,9 @@ export default function PatientList() {
               <tr>
                 <th style={{ width: '120px' }}>
                   <div className="flex-col gap-1">
-                    <span>№ ИБ</span>
+                    <span className="flex items-center gap-1 cursor-pointer select-none hover:text-primary" onClick={() => handleSort('caseHistoryNumber')}>
+                      № ИБ <SortIcon field="caseHistoryNumber" />
+                    </span>
                     <input 
                       type="text" 
                       className="input-field" 
@@ -143,19 +144,6 @@ export default function PatientList() {
                     />
                   </div>
                 </th>
-                <th style={{ width: '120px' }}>
-                  <div className="flex-col gap-1">
-                    <span>Жетон</span>
-                    <input 
-                      type="text" 
-                      className="input-field" 
-                      style={{ padding: '0.2rem 0.4rem', fontSize: '0.7rem' }} 
-                      placeholder="Фильтр..." 
-                      value={tokenFilter}
-                      onChange={e => setTokenFilter(e.target.value)}
-                    />
-                  </div>
-                </th>
                 <th>
                   <div className="flex-col gap-1">
                     <span className="flex items-center gap-1 cursor-pointer select-none hover:text-primary" onClick={() => handleSort('fullName')}>
@@ -163,6 +151,7 @@ export default function PatientList() {
                     </span>
                   </div>
                 </th>
+                <th>Служба</th>
                 <th>
                   <div className="flex-col gap-1">
                     <span className="flex items-center gap-1 cursor-pointer select-none hover:text-primary" onClick={() => handleSort('department')}>
@@ -220,20 +209,8 @@ export default function PatientList() {
               {filteredPatients.map(patient => (
                 <tr key={patient.id} onClick={() => navigate(`/patients/${patient.id}`)}>
                   <td className="text-muted" style={{ fontSize: '0.75rem', fontWeight: 500 }}>{patient.caseHistoryNumber || '—'}</td>
-                  <td className="text-muted" style={{ fontSize: '0.75rem', fontWeight: 500 }}>{patient.tokenNumber || '—'}</td>
                   <td style={{ fontWeight: 600, color: 'var(--primary-hover)' }}>
-                    <div className="flex items-center gap-2">
-                      <span>{patient.fullName}</span>
-                      {patient.militaryStatus === 'Контракт' && patient.isSvoParticipant && (
-                        <span className="badge" style={{ background: 'var(--danger-light)', color: 'var(--danger)', fontSize: '0.6rem', padding: '0.1rem 0.3rem', flexShrink: 0 }}>СВО</span>
-                      )}
-                      {patient.militaryStatus === 'Контракт' && !patient.isSvoParticipant && (
-                        <span className="badge" style={{ background: 'var(--primary-light)', color: 'var(--primary)', fontSize: '0.6rem', padding: '0.1rem 0.3rem', flexShrink: 0 }}>КОНТРАКТ</span>
-                      )}
-                      {patient.militaryStatus === 'Призыв' && (
-                        <span className="badge" style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', color: 'var(--text)', fontSize: '0.6rem', padding: '0.1rem 0.3rem', flexShrink: 0 }}>ПРИЗЫВ</span>
-                      )}
-                    </div>
+                    <span>{patient.fullName}</span>
                     {(patient.rank || patient.militaryUnit) && (
                       <div className="text-muted mt-1" style={{ fontSize: '0.7rem', fontWeight: 400 }}>
                         {patient.rank && <span>{patient.rank}</span>}
@@ -241,6 +218,19 @@ export default function PatientList() {
                         {patient.militaryUnit && <span>в/ч {patient.militaryUnit}</span>}
                       </div>
                     )}
+                  </td>
+                  <td>
+                    <div className="flex items-center flex-wrap gap-1">
+                      {patient.militaryStatus === 'Контракт' && patient.isSvoParticipant && (
+                        <span className="badge" style={{ background: 'var(--danger-light)', color: 'var(--danger)', fontSize: '0.6rem', padding: '0.1rem 0.3rem' }}>СВО</span>
+                      )}
+                      {patient.militaryStatus === 'Контракт' && !patient.isSvoParticipant && (
+                        <span className="badge" style={{ background: 'var(--primary-light)', color: 'var(--primary)', fontSize: '0.6rem', padding: '0.1rem 0.3rem' }}>КОНТРАКТ</span>
+                      )}
+                      {patient.militaryStatus === 'Призыв' && (
+                        <span className="badge" style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', color: 'var(--text)', fontSize: '0.6rem', padding: '0.1rem 0.3rem' }}>ПРИЗЫВ</span>
+                      )}
+                    </div>
                   </td>
                   <td style={{ fontSize: '0.8rem' }}>{patient.department}</td>
                   <td style={{ fontSize: '0.75rem' }}>{getDisplayDiagnosis(patient)}</td>
