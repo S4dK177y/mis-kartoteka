@@ -16,12 +16,15 @@ model Patient {
   caseHistoryNumber    String?    // Номер карты (истории болезни)
   rank                String?    // Звание
   militaryUnit        String?    // № в/ч
+  militaryStatus      String?    // 'Призыв' или 'Контракт'
+  isSvoParticipant    Boolean    @default(false)
   fullName            String
   birthDate           DateTime
   address             String?
   admissionDiagnosis  String?    // Диагноз при поступлении
   clinicalDiagnosis   String?    // Клинический диагноз
   finalDiagnosis      String?    // Заключительный диагноз
+  complications       String?    // Осложнения и сопутствующие
   department          String     // Текущее отделение
   admissionDate       DateTime   @default(now())
   dischargeDate       DateTime?  // Дата выписки

@@ -5,7 +5,9 @@ import { Save, ArrowLeft } from 'lucide-react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { ru } from 'date-fns/locale';
+import InputMask from 'react-input-mask';
 import ICD10Autocomplete from '../components/ICD10Autocomplete';
+import { MILITARY_RANKS } from '../ranks';
 
 export const DEPARTMENTS = [
   'Неврологическое отделение (НО)',
@@ -29,18 +31,24 @@ export default function PatientForm() {
     caseHistoryNumber: '',
     rank: '',
     militaryUnit: '',
+    militaryStatus: 'Призыв',
+    isSvoParticipant: false,
     fullName: '',
-    birthDate: '',
     address: '',
     admissionDiagnosis: '',
     clinicalDiagnosis: '',
     finalDiagnosis: '',
+    complications: '',
     department: DEPARTMENTS[0],
     status: 'На лечении'
   });
-  const [admissionDate, setAdmissionDate] = useState(new Date());
-  const [birthDate, setBirthDate] = useState(null);
   
+  const [admissionDate, setAdmissionDate] = useState(new Date());
+  // We handle birthDate manually to use masking easily if datepicker customInput acts up, 
+  // but datepicker has issues with strict masks sometimes. 
+  // Let's use string state for the mask.
+  const [birthDateString, setBirthDateString] = useState('');
+
   const [loading, setLoading] = useState(isEditing);
 
   useEffect(() => {
@@ -57,16 +65,24 @@ export default function PatientForm() {
         caseHistoryNumber: data.caseHistoryNumber || '',
         rank: data.rank || '',
         militaryUnit: data.militaryUnit || '',
+        militaryStatus: data.militaryStatus || 'Призыв',
+        isSvoParticipant: data.isSvoParticipant || false,
         fullName: data.fullName,
         address: data.address || '',
         admissionDiagnosis: data.admissionDiagnosis || '',
         clinicalDiagnosis: data.clinicalDiagnosis || '',
         finalDiagnosis: data.finalDiagnosis || '',
+        complications: data.complications || '',
         department: data.department || DEPARTMENTS[0],
         status: data.status
       });
       setAdmissionDate(new Date(data.admissionDate));
-      setBirthDate(new Date(data.birthDate));
+      
+      const bd = new Date(data.birthDate);
+      const d = String(bd.getDate()).padStart(2, '0');
+      const m = String(bd.getMonth() + 1).padStart(2, '0');
+      const y = bd.getFullYear();
+      setBirthDateString(`${d}.${m}.${y}`);
     } catch (error) {
       console.error(error);
       alert('Ошибка при загрузке данных пациента');
@@ -76,11 +92,13 @@ export default function PatientForm() {
   };
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const target = e.target;
+    const name = target.name;
+    const value = target.type === 'checkbox' ? target.checked : target.value;
+    
     // Token validation enforcing upper case and pattern A-0000 / AA-00000
     if (name === 'tokenNumber') {
       let val = value.toUpperCase();
-      // Remove invalid chars
       val = val.replace(/[^А-ЯA-Z0-9-]/g, '');
       setFormData(prev => ({ ...prev, [name]: val }));
       return;
@@ -90,12 +108,19 @@ export default function PatientForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!birthDate) {
-      alert("Пожалуйста, укажите дату рождения");
+    
+    // Parse birth date
+    const parts = birthDateString.split('.');
+    if (parts.length !== 3 || parts[2].includes('_')) {
+      alert("Пожалуйста, введите корректную дату рождения (ДД.ММ.ГГГГ)");
       return;
     }
-    
-    // Validate token format if present
+    const parsedBd = new Date(`${parts[2]}-${parts[1]}-${parts[0]}T00:00:00Z`);
+    if (isNaN(parsedBd.getTime())) {
+      alert("Некорректная дата рождения");
+      return;
+    }
+
     if (formData.tokenNumber) {
       const tokenRegex = /^[А-ЯA-Z]{1,2}-\d+$/;
       if (!tokenRegex.test(formData.tokenNumber)) {
@@ -108,7 +133,7 @@ export default function PatientForm() {
       const submissionData = {
         ...formData,
         admissionDate: admissionDate.toISOString(),
-        birthDate: birthDate.toISOString()
+        birthDate: parsedBd.toISOString()
       };
 
       if (isEditing) {
@@ -144,21 +169,57 @@ export default function PatientForm() {
             </div>
             <div className="input-group">
               <label className="input-label">Дата рождения *</label>
-              <DatePicker
-                selected={birthDate}
-                onChange={(date) => setBirthDate(date)}
-                dateFormat="dd.MM.yyyy"
-                locale={ru}
-                showYearDropdown
-                dropdownMode="select"
+              <InputMask
+                mask="99.99.9999"
+                value={birthDateString}
+                onChange={(e) => setBirthDateString(e.target.value)}
+                placeholder="ДД.ММ.ГГГГ"
                 className="input-field"
-                placeholderText="ДД.ММ.ГГГГ"
                 required
               />
             </div>
           </div>
           
           <div className="grid-2">
+            <div className="input-group">
+              <label className="input-label">Воинское звание</label>
+              <select name="rank" className="input-field" value={formData.rank} onChange={handleChange}>
+                <option value="">Не указано</option>
+                {MILITARY_RANKS.map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+            </div>
+            <div className="input-group">
+              <label className="input-label">Номер в/ч</label>
+              <input type="text" name="militaryUnit" className="input-field" value={formData.militaryUnit} onChange={handleChange} />
+            </div>
+          </div>
+
+          <div className="grid-2" style={{ alignItems: 'flex-start' }}>
+            <div className="input-group">
+              <label className="input-label">Статус службы</label>
+              <div className="flex gap-4 mt-2">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" name="militaryStatus" value="Призыв" checked={formData.militaryStatus === 'Призыв'} onChange={handleChange} />
+                  <span>По призыву</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" name="militaryStatus" value="Контракт" checked={formData.militaryStatus === 'Контракт'} onChange={handleChange} />
+                  <span>По контракту</span>
+                </label>
+              </div>
+            </div>
+            
+            {formData.militaryStatus === 'Контракт' && (
+              <div className="input-group mt-2">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" name="isSvoParticipant" checked={formData.isSvoParticipant} onChange={handleChange} />
+                  <span style={{ fontWeight: 600, color: 'var(--danger)' }}>Участник СВО</span>
+                </label>
+              </div>
+            )}
+          </div>
+
+          <div className="grid-2 mt-2">
             <div className="input-group">
               <label className="input-label">Личный номер (Жетон)</label>
               <input type="text" name="tokenNumber" className="input-field" placeholder="АВ-123456" value={formData.tokenNumber} onChange={handleChange} />
@@ -169,18 +230,7 @@ export default function PatientForm() {
             </div>
           </div>
 
-          <div className="grid-2">
-            <div className="input-group">
-              <label className="input-label">Воинское звание</label>
-              <input type="text" name="rank" className="input-field" placeholder="Например: Рядовой" value={formData.rank} onChange={handleChange} />
-            </div>
-            <div className="input-group">
-              <label className="input-label">Номер в/ч</label>
-              <input type="text" name="militaryUnit" className="input-field" value={formData.militaryUnit} onChange={handleChange} />
-            </div>
-          </div>
-
-          <div className="input-group" style={{ margin: 0 }}>
+          <div className="input-group mt-2" style={{ margin: 0 }}>
             <label className="input-label">Адрес проживания</label>
             <input type="text" name="address" className="input-field" value={formData.address} onChange={handleChange} />
           </div>
@@ -216,6 +266,18 @@ export default function PatientForm() {
           <ICD10Autocomplete label="Диагноз при поступлении (МКБ-10)" name="admissionDiagnosis" value={formData.admissionDiagnosis} onChange={handleChange} />
           <ICD10Autocomplete label="Клинический диагноз (МКБ-10)" name="clinicalDiagnosis" value={formData.clinicalDiagnosis} onChange={handleChange} />
           <ICD10Autocomplete label="Заключительный диагноз (МКБ-10)" name="finalDiagnosis" value={formData.finalDiagnosis} onChange={handleChange} />
+          
+          <div className="input-group mt-2 mb-0">
+            <label className="input-label">Осложнения и сопутствующие заболевания</label>
+            <textarea 
+              name="complications" 
+              className="input-field" 
+              style={{ minHeight: '80px', resize: 'vertical' }}
+              value={formData.complications} 
+              onChange={handleChange}
+              placeholder="Введите сопутствующие диагнозы и осложнения..."
+            ></textarea>
+          </div>
         </div>
 
         <div className="flex justify-end gap-2">

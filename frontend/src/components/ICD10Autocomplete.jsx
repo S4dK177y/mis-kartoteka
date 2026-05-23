@@ -6,6 +6,24 @@ export default function ICD10Autocomplete({ name, value, onChange, label, placeh
   const [suggestions, setSuggestions] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
   const wrapperRef = useRef(null);
+  
+  // To hold the full JSON if loaded
+  const [fullDb, setFullDb] = useState(null);
+
+  useEffect(() => {
+    // Attempt to load full MKB-10 from public folder
+    fetch('/mkb10.json')
+      .then(res => res.json())
+      .then(data => {
+        // Assume data is array of {code, name}
+        if (Array.isArray(data)) {
+          setFullDb(data);
+        }
+      })
+      .catch(() => {
+        // Silently fail, will use fallback mock from mkb10.js
+      });
+  }, []);
 
   useEffect(() => {
     setQuery(value || '');
@@ -21,13 +39,25 @@ export default function ICD10Autocomplete({ name, value, onChange, label, placeh
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [wrapperRef]);
 
+  const doSearch = (val) => {
+    const q = val.toLowerCase();
+    if (fullDb) {
+      return fullDb.filter(item => 
+        (item.code && item.code.toLowerCase().includes(q)) || 
+        (item.name && item.name.toLowerCase().includes(q))
+      ).slice(0, 15);
+    } else {
+      return searchMKB10(val);
+    }
+  };
+
   const handleInputChange = (e) => {
     const val = e.target.value;
     setQuery(val);
     onChange({ target: { name, value: val } });
     
     if (val.length > 1) {
-      setSuggestions(searchMKB10(val));
+      setSuggestions(doSearch(val));
       setIsOpen(true);
     } else {
       setIsOpen(false);

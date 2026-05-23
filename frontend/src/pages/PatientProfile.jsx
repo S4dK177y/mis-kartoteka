@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Edit2, Trash2, Upload, File as FileIcon, ExternalLink, RefreshCw, LogOut, FileText } from 'lucide-react';
+import { ArrowLeft, Edit2, Trash2, Upload, File as FileIcon, ExternalLink, RefreshCw, LogOut, FileText, AlertCircle } from 'lucide-react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { ru } from 'date-fns/locale';
@@ -37,7 +37,6 @@ export default function PatientProfile() {
     try {
       const data = await api.getPatient(id);
       setPatient(data);
-      // Pre-fill discharge modal
       setDischargeData(prev => ({
         ...prev,
         finalDiagnosis: data.finalDiagnosis || data.clinicalDiagnosis || data.admissionDiagnosis || ''
@@ -122,11 +121,17 @@ export default function PatientProfile() {
             <ArrowLeft size={16} />
           </button>
           <div>
-            <h2 className="text-xl m-0">{patient.fullName}</h2>
-            <div className="text-muted text-sm flex gap-3 mt-1">
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl m-0">{patient.fullName}</h2>
+              {patient.isSvoParticipant && (
+                <span className="badge badge-active" style={{ background: '#fef2f2', color: '#ef4444', border: '1px solid #fca5a5', padding: '0.1rem 0.4rem', fontSize: '0.65rem' }}>СВО</span>
+              )}
+            </div>
+            <div className="text-muted text-sm flex gap-3 mt-1 flex-wrap">
               {patient.tokenNumber && <span>Ж: {patient.tokenNumber}</span>}
               {patient.caseHistoryNumber && <span>ИБ: {patient.caseHistoryNumber}</span>}
               {patient.rank && <span>Зв: {patient.rank}</span>}
+              {patient.militaryStatus && <span>Статус: {patient.militaryStatus}</span>}
             </div>
           </div>
         </div>
@@ -294,21 +299,31 @@ export default function PatientProfile() {
         <div className="card p-4" style={{ gridColumn: 'span 1' }}>
           <h3 className="text-lg mb-3 text-primary">Диагнозы</h3>
           
-          <div className="flex-col gap-3">
-            <div className="p-3" style={{ background: 'var(--bg-main)', borderRadius: 'var(--radius-sm)' }}>
-              <div className="text-xs font-semibold text-muted uppercase tracking-wider mb-1">При поступлении</div>
-              <p className="text-sm">{patient.admissionDiagnosis || 'Не установлен'}</p>
+          <div className="flex-col gap-4">
+            <div className="p-4" style={{ background: '#f8fafc', borderRadius: 'var(--radius-md)', border: '1px solid #e2e8f0' }}>
+              <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">При поступлении</div>
+              <p className="text-sm m-0 leading-relaxed text-slate-800">{patient.admissionDiagnosis || 'Не установлен'}</p>
             </div>
             
-            <div className="p-3" style={{ background: 'var(--primary-light)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(14, 165, 233, 0.2)' }}>
-              <div className="text-xs font-semibold text-primary uppercase tracking-wider mb-1">Клинический</div>
-              <p className="text-sm" style={{ fontWeight: 500 }}>{patient.clinicalDiagnosis || 'В процессе...'}</p>
+            <div className="p-4 shadow-sm" style={{ background: 'var(--primary-light)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(14, 165, 233, 0.3)' }}>
+              <div className="text-xs font-bold text-primary uppercase tracking-wider mb-2">Клинический</div>
+              <p className="text-sm m-0 leading-relaxed text-slate-900" style={{ fontWeight: 500 }}>{patient.clinicalDiagnosis || 'В процессе...'}</p>
             </div>
             
-            <div className="p-3" style={{ background: patient.status === 'Выписан' ? 'var(--secondary-light)' : 'var(--bg-main)', borderRadius: 'var(--radius-sm)' }}>
-              <div className="text-xs font-semibold text-muted uppercase tracking-wider mb-1">Заключительный</div>
-              <p className="text-sm">{patient.finalDiagnosis || 'Не вынесен'}</p>
+            <div className="p-4" style={{ background: patient.status === 'Выписан' ? 'var(--secondary-light)' : '#f8fafc', borderRadius: 'var(--radius-md)', border: patient.status === 'Выписан' ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid #e2e8f0' }}>
+              <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Заключительный</div>
+              <p className="text-sm m-0 leading-relaxed text-slate-800">{patient.finalDiagnosis || 'Не вынесен'}</p>
             </div>
+
+            {patient.complications && (
+              <div className="p-4 mt-2 shadow-sm" style={{ background: '#fff1f2', borderRadius: 'var(--radius-md)', border: '1px solid #fecdd3' }}>
+                <div className="flex items-center gap-1 mb-2">
+                  <AlertCircle size={14} color="#e11d48" />
+                  <div className="text-xs font-bold text-rose-600 uppercase tracking-wider">Осложнения и сопутствующие</div>
+                </div>
+                <p className="text-sm m-0 leading-relaxed text-rose-900" style={{ whiteSpace: 'pre-wrap' }}>{patient.complications}</p>
+              </div>
+            )}
           </div>
         </div>
 

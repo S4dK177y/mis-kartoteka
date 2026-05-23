@@ -78,8 +78,8 @@ app.get('/api/patients/:id', async (req, res) => {
 app.post('/api/patients', async (req, res) => {
   try {
     const { 
-      tokenNumber, caseHistoryNumber, rank, militaryUnit, fullName, birthDate, address, 
-      admissionDiagnosis, clinicalDiagnosis, finalDiagnosis, 
+      tokenNumber, caseHistoryNumber, rank, militaryUnit, militaryStatus, isSvoParticipant, fullName, birthDate, address, 
+      admissionDiagnosis, clinicalDiagnosis, finalDiagnosis, complications,
       department, admissionDate 
     } = req.body;
     
@@ -89,12 +89,15 @@ app.post('/api/patients', async (req, res) => {
         caseHistoryNumber,
         rank,
         militaryUnit,
+        militaryStatus,
+        isSvoParticipant: Boolean(isSvoParticipant),
         fullName,
         birthDate: new Date(birthDate),
         address,
         admissionDiagnosis,
         clinicalDiagnosis,
         finalDiagnosis,
+        complications,
         department,
         admissionDate: admissionDate ? new Date(admissionDate) : new Date(),
         status: 'На лечении',
@@ -116,8 +119,8 @@ app.post('/api/patients', async (req, res) => {
 app.put('/api/patients/:id', async (req, res) => {
   try {
     const { 
-      tokenNumber, caseHistoryNumber, rank, militaryUnit, fullName, birthDate, address, 
-      admissionDiagnosis, clinicalDiagnosis, finalDiagnosis, 
+      tokenNumber, caseHistoryNumber, rank, militaryUnit, militaryStatus, isSvoParticipant, fullName, birthDate, address, 
+      admissionDiagnosis, clinicalDiagnosis, finalDiagnosis, complications,
       department, admissionDate, dischargeDate, dischargeDestination, status 
     } = req.body;
     
@@ -128,12 +131,15 @@ app.put('/api/patients/:id', async (req, res) => {
         caseHistoryNumber,
         rank,
         militaryUnit,
+        militaryStatus,
+        isSvoParticipant: Boolean(isSvoParticipant),
         fullName,
         birthDate: birthDate ? new Date(birthDate) : undefined,
         address,
         admissionDiagnosis,
         clinicalDiagnosis,
         finalDiagnosis,
+        complications,
         department,
         admissionDate: admissionDate ? new Date(admissionDate) : undefined,
         dischargeDate: dischargeDate ? new Date(dischargeDate) : null,
@@ -257,6 +263,8 @@ app.get('/api/export/patients', async (req, res) => {
     worksheet.columns = [
       { header: '№ ИБ', key: 'caseHistoryNumber', width: 15 },
       { header: 'Дата поступления', key: 'admissionDate', width: 20 },
+      { header: 'Статус службы', key: 'militaryStatus', width: 15 },
+      { header: 'Участник СВО', key: 'isSvoParticipant', width: 15 },
       { header: 'Звание', key: 'rank', width: 15 },
       { header: 'ФИО', key: 'fullName', width: 30 },
       { header: 'Дата рождения', key: 'birthDate', width: 15 },
@@ -264,6 +272,7 @@ app.get('/api/export/patients', async (req, res) => {
       { header: '№ в/ч', key: 'militaryUnit', width: 15 },
       { header: 'Д/з при поступлении', key: 'admissionDiagnosis', width: 30 },
       { header: 'Клинический Д/з', key: 'clinicalDiagnosis', width: 30 },
+      { header: 'Осложнения', key: 'complications', width: 30 },
       { header: 'Заключительный Д/з', key: 'finalDiagnosis', width: 30 },
       { header: 'Отделение', key: 'department', width: 25 },
       { header: 'Статус', key: 'status', width: 15 },
@@ -275,6 +284,8 @@ app.get('/api/export/patients', async (req, res) => {
       worksheet.addRow({
         caseHistoryNumber: p.caseHistoryNumber || '',
         admissionDate: p.admissionDate.toISOString().replace('T', ' ').substring(0, 16),
+        militaryStatus: p.militaryStatus || '',
+        isSvoParticipant: p.isSvoParticipant ? 'Да' : 'Нет',
         rank: p.rank || '',
         fullName: p.fullName,
         birthDate: p.birthDate.toISOString().split('T')[0],
@@ -282,6 +293,7 @@ app.get('/api/export/patients', async (req, res) => {
         militaryUnit: p.militaryUnit || '',
         admissionDiagnosis: p.admissionDiagnosis || '',
         clinicalDiagnosis: p.clinicalDiagnosis || '',
+        complications: p.complications || '',
         finalDiagnosis: p.finalDiagnosis || '',
         department: p.department,
         status: p.status,
@@ -293,7 +305,7 @@ app.get('/api/export/patients', async (req, res) => {
     // AutoFilter for all columns
     worksheet.autoFilter = {
       from: 'A1',
-      to: 'N1'
+      to: 'Q1'
     };
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
