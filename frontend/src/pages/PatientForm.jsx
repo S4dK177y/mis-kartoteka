@@ -5,9 +5,8 @@ import { Save, ArrowLeft } from 'lucide-react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { ru } from 'date-fns/locale';
-import InputMask from 'react-input-mask';
 import ICD10Autocomplete from '../components/ICD10Autocomplete';
-import { MILITARY_RANKS } from '../ranks';
+import { MILITARY_RANKS_GROUPS } from '../ranks';
 
 export const DEPARTMENTS = [
   'Неврологическое отделение (НО)',
@@ -103,6 +102,18 @@ export default function PatientForm() {
       setFormData(prev => ({ ...prev, [name]: val }));
       return;
     }
+    // Custom Date Mask (DD.MM.YYYY)
+    if (name === 'birthDateString') {
+      let val = value.replace(/\D/g, ''); // keep only digits
+      if (val.length > 8) val = val.substring(0, 8);
+      let formatted = '';
+      if (val.length > 0) formatted += val.substring(0, 2);
+      if (val.length > 2) formatted += '.' + val.substring(2, 4);
+      if (val.length > 4) formatted += '.' + val.substring(4, 8);
+      setBirthDateString(formatted);
+      return;
+    }
+
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
@@ -169,12 +180,14 @@ export default function PatientForm() {
             </div>
             <div className="input-group">
               <label className="input-label">Дата рождения *</label>
-              <InputMask
-                mask="99.99.9999"
+              <input
+                type="text"
+                name="birthDateString"
                 value={birthDateString}
-                onChange={(e) => setBirthDateString(e.target.value)}
+                onChange={handleChange}
                 placeholder="ДД.ММ.ГГГГ"
                 className="input-field"
+                maxLength="10"
                 required
               />
             </div>
@@ -185,7 +198,11 @@ export default function PatientForm() {
               <label className="input-label">Воинское звание</label>
               <select name="rank" className="input-field" value={formData.rank} onChange={handleChange}>
                 <option value="">Не указано</option>
-                {MILITARY_RANKS.map(r => <option key={r} value={r}>{r}</option>)}
+                {MILITARY_RANKS_GROUPS.map((group, idx) => (
+                  <optgroup key={idx} label={group.label}>
+                    {group.options.map(r => <option key={r} value={r}>{r}</option>)}
+                  </optgroup>
+                ))}
               </select>
             </div>
             <div className="input-group">
