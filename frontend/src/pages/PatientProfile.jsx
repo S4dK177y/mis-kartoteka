@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Edit2, Trash2, Upload, File as FileIcon, ExternalLink, RefreshCw, LogOut, FileText, AlertCircle, Download, FilePlus, X } from 'lucide-react';
+import { 
+  ArrowLeft, Edit2, Trash2, Upload, ExternalLink, RefreshCw, LogOut, 
+  AlertCircle, FilePlus, X, User, Calendar, MapPin, Activity, 
+  FileText, Download, Shield, Plus, Save, Edit3, Image, 
+  FileArchive, File as FileIcon, FileAudio, FileVideo 
+} from 'lucide-react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { ru } from 'date-fns/locale';
@@ -469,7 +474,18 @@ export default function PatientProfile() {
               patient.documents.map(doc => (
                 <div key={doc.id} className="flex justify-between items-center p-2" style={{ background: 'var(--bg-main)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-light)' }}>
                   <div className="flex items-center gap-2" style={{ overflow: 'hidden' }}>
-                    <FileIcon size={16} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                    {(() => {
+                      const lowerName = doc.originalName.toLowerCase();
+                      const lowerMime = doc.mimeType.toLowerCase();
+                      if (lowerName.endsWith('.pdf')) return <FileText size={16} style={{ color: '#ef4444', flexShrink: 0 }} />;
+                      if (lowerMime.startsWith('image/')) return <Image size={16} style={{ color: '#0ea5e9', flexShrink: 0 }} />;
+                      if (lowerMime.startsWith('video/')) return <FileVideo size={16} style={{ color: '#a855f7', flexShrink: 0 }} />;
+                      if (lowerMime.startsWith('audio/')) return <FileAudio size={16} style={{ color: '#f59e0b', flexShrink: 0 }} />;
+                      if (lowerName.endsWith('.zip') || lowerName.endsWith('.rar') || lowerName.endsWith('.7z')) return <FileArchive size={16} style={{ color: '#f59e0b', flexShrink: 0 }} />;
+                      if (lowerName.endsWith('.doc') || lowerName.endsWith('.docx')) return <FileText size={16} style={{ color: '#2563eb', flexShrink: 0 }} />;
+                      if (lowerName.endsWith('.xls') || lowerName.endsWith('.xlsx')) return <FileText size={16} style={{ color: '#10b981', flexShrink: 0 }} />;
+                      return <FileIcon size={16} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />;
+                    })()}
                     <div className="flex-col" style={{ overflow: 'hidden' }}>
                       <a href="#" onClick={(e) => handleFileClick(e, doc)} style={{ textDecoration: 'none', color: 'var(--text-main)', fontSize: '0.8rem', fontWeight: 500, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
                         {doc.originalName}
@@ -491,6 +507,71 @@ export default function PatientProfile() {
               ))
             )}
           </div>
+        </div>
+
+        {/* History of Hospitalizations (Full Width) */}
+        <div className="card p-4" style={{ gridColumn: 'span 3' }}>
+          <div className="flex items-center gap-2 mb-4">
+            <Activity size={20} className="text-primary" />
+            <h3 className="text-lg m-0 text-primary">Предыдущие госпитализации</h3>
+          </div>
+          
+          {(!patient.history || patient.history.length === 0) ? (
+            <div className="text-center text-muted p-4" style={{ background: 'var(--bg-main)', borderRadius: 'var(--radius-md)' }}>
+              <p className="m-0">История госпитализаций отсутствует</p>
+            </div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                <thead>
+                  <tr style={{ borderBottom: '2px solid var(--border)', textAlign: 'left', color: 'var(--text-muted)' }}>
+                    <th style={{ padding: '10px' }}>Период</th>
+                    <th style={{ padding: '10px' }}>№ ИБ</th>
+                    <th style={{ padding: '10px' }}>Отделение</th>
+                    <th style={{ padding: '10px' }}>Заключительный диагноз</th>
+                    <th style={{ padding: '10px' }}>Статус</th>
+                    <th style={{ padding: '10px', textAlign: 'right' }}>Действия</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {patient.history.map(hist => (
+                    <tr key={hist.id} style={{ borderBottom: '1px solid var(--border-light)' }}>
+                      <td style={{ padding: '10px' }}>
+                        {new Date(hist.admissionDate).toLocaleDateString()} — {hist.dischargeDate ? new Date(hist.dischargeDate).toLocaleDateString() : '...'}
+                      </td>
+                      <td style={{ padding: '10px', fontWeight: '500' }}>{hist.caseHistoryNumber || '—'}</td>
+                      <td style={{ padding: '10px' }}>{hist.department}</td>
+                      <td style={{ padding: '10px' }}>
+                        <div style={{ maxWidth: '300px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={hist.finalDiagnosis || hist.clinicalDiagnosis || 'Нет диагноза'}>
+                          {hist.finalDiagnosis || hist.clinicalDiagnosis || <span className="text-muted">Нет диагноза</span>}
+                        </div>
+                      </td>
+                      <td style={{ padding: '10px' }}>
+                        <span style={{ 
+                          padding: '2px 8px', borderRadius: '12px', fontSize: '0.8rem',
+                          background: hist.status === 'Выписан' ? '#dcfce3' : 'var(--primary-light)',
+                          color: hist.status === 'Выписан' ? '#166534' : 'var(--primary-dark)'
+                        }}>
+                          {hist.status}
+                        </span>
+                      </td>
+                      <td style={{ padding: '10px', textAlign: 'right' }}>
+                        <button 
+                          className="btn btn-sm btn-outline" 
+                          onClick={() => {
+                            window.scrollTo(0,0);
+                            navigate(`/patients/${hist.id}`);
+                          }}
+                        >
+                          Перейти
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
       </div>

@@ -25,7 +25,7 @@ const Header = () => {
         <div style={{ background: 'var(--primary)', color: 'white', padding: '6px', borderRadius: '10px', display: 'flex' }}>
           <Activity size={24} />
         </div>
-        МедКартотека
+        МИС Картотека
       </Link>
       
       <div className="flex gap-4 items-center">

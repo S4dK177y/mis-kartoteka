@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>МИС Картотека - Управление сервером</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #f8fafc; color: #0f172a; padding: 20px; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+    
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: white; padding: 20px 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); }
+    .brand { display: flex; align-items: center; gap: 15px; }
+    .logo { display: flex; align-items: center; gap: 15px; }
+    .logo-icon { background: linear-gradient(135deg, #0ea5e9, #6366f1); color: white; padding: 10px 15px; border-radius: 10px; font-weight: bold; font-size: 1.4rem; letter-spacing: 1px; box-shadow: 0 4px 10px rgba(14, 165, 233, 0.3); }
+    h1 { font-size: 1.5rem; font-weight: 700; color: #1e293b; }
+    
+    .status { display: flex; align-items: center; gap: 12px; font-weight: 600; font-size: 1.1rem; background: #f1f5f9; padding: 8px 16px; border-radius: 20px; }
+    .indicator { width: 14px; height: 14px; border-radius: 50%; }
+    .indicator.online { background: #10b981; box-shadow: 0 0 12px rgba(16, 185, 129, 0.6); }
+    .indicator.offline { background: #ef4444; }
+    
+    .controls { display: flex; gap: 15px; margin-bottom: 20px; }
+    .btn { flex: 1; padding: 16px 24px; border: none; border-radius: 10px; font-size: 1.1rem; font-weight: 600; cursor: pointer; transition: 0.2s; color: white; display: flex; align-items: center; justify-content: center; gap: 10px; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+    .btn:active { transform: scale(0.98); }
+    .btn-start { background: #0ea5e9; box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3); }
+    .btn-start:not(:disabled):hover { background: #0284c7; box-shadow: 0 6px 16px rgba(14, 165, 233, 0.4); }
+    .btn-stop { background: #ef4444; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3); }
+    .btn-stop:not(:disabled):hover { background: #dc2626; box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4); }
+    .btn-browser { background: #8b5cf6; box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3); }
+    .btn-browser:not(:disabled):hover { background: #7c3aed; box-shadow: 0 6px 16px rgba(139, 92, 246, 0.4); }
+    
+    .console-section { flex: 1; background: #0f172a; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15); border: 1px solid #1e293b; }
+    .console-header { background: #1e293b; color: #94a3b8; padding: 12px 20px; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; display: flex; justify-content: space-between; align-items: center; }
+    .log-filters { display: flex; gap: 10px; }
+    .filter-btn { background: none; border: 1px solid #334155; color: #94a3b8; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; }
+    .filter-btn.active { background: #334155; color: white; }
+    .clear-btn { background: none; border: none; color: #cbd5e1; cursor: pointer; font-size: 0.8rem; }
+    .clear-btn:hover { color: white; }
+    .console-output { flex: 1; padding: 20px; color: #e2e8f0; font-family: 'Consolas', 'Courier New', monospace; font-size: 0.95rem; overflow-y: auto; white-space: pre-wrap; word-wrap: break-word; line-height: 1.5; }
+    
+    .console-output::-webkit-scrollbar { width: 10px; }
+    .console-output::-webkit-scrollbar-track { background: #0f172a; }
+    .console-output::-webkit-scrollbar-thumb { background: #334155; border-radius: 5px; }
+    .console-output::-webkit-scrollbar-thumb:hover { background: #475569; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">
+      <div class="logo-icon">МИС</div>
+      <h1>Картотека</h1>
+    </div>
+    <div class="status">
+      <div id="status-indicator" class="indicator offline"></div>
+      <span id="status-text">Остановлен</span>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button id="btn-start" class="btn btn-start">🟢 Запустить сервер</button>
+    <button id="btn-stop" class="btn btn-stop" disabled>🔴 Остановить</button>
+    <button id="btn-browser" class="btn btn-browser" disabled>🌐 Открыть МИС</button>
+  </div>
+
+  <div class="console-section">
+    <div class="console-header">
+      <span>СИСТЕМНЫЙ ЖУРНАЛ</span>
+      <div class="log-filters">
+        <button id="filter-all" class="filter-btn active">Все</button>
+        <button id="filter-info" class="filter-btn">Инфо</button>
+        <button id="filter-error" class="filter-btn">Ошибки</button>
+      </div>
+      <button id="btn-clear" class="clear-btn">Очистить</button>
+    </div>
+    <div class="console-output" id="console-output">
+      <span style="color: #cbd5e1;">Готово к работе. Нажмите "Запустить сервер".</span>
+    </div>
+  </div>
+  <script src="renderer.js"></script>
+</body>
+</html>

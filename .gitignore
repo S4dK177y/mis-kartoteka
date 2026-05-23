@@ -90,3 +90,7 @@ frontend/dist/
 data/
 *.sqlite
 *.sqlite-journal
+
+launcher/node_modules/
+launcher/dist/
+dist/

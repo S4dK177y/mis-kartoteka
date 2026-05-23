@@ -22,6 +22,24 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 
+// Логирование всех запросов
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    const status = res.statusCode;
+    // Don't log static files fetching heavily
+    if (req.originalUrl.startsWith('/assets/') || req.originalUrl === '/favicon.ico') return;
+
+    if (status >= 400) {
+      console.log(`[ОШИБКА] ${req.method} ${req.originalUrl} - Статус: ${status} (${duration}ms)`);
+    } else {
+      console.log(`[СИСТЕМА] ${req.method} ${req.originalUrl} - Статус: ${status} (${duration}ms)`);
+    }
+  });
+  next();
+});
+
 // Setup Storage Directory for uploaded files
 const storageDir = path.join(__dirname, '..', 'data', 'storage');
 if (!fs.existsSync(storageDir)) {
@@ -254,6 +272,29 @@ app.get('/api/patients/:id', authenticateToken, async (req, res) => {
 
     patient.documents = documents;
 
+    // Fetch history of hospitalizations
+    let history = [];
+    if (patient.personId) {
+      history = await prisma.patient.findMany({
+        where: { 
+          personId: patient.personId,
+          id: { not: patient.id }
+        },
+        orderBy: { admissionDate: 'desc' },
+        select: { 
+          id: true, 
+          admissionDate: true, 
+          dischargeDate: true, 
+          caseHistoryNumber: true, 
+          finalDiagnosis: true, 
+          clinicalDiagnosis: true,
+          status: true,
+          department: true
+        }
+      });
+    }
+    patient.history = history;
+
     res.json(patient);
   } catch (error) {
     res.status(500).json({ error: 'Internal Server Error' });
@@ -269,9 +310,37 @@ app.post('/api/patients', authenticateToken, async (req, res) => {
       department, admissionDate, personId
     } = req.body;
     
+    let finalPersonId = personId;
+    
+    if (!finalPersonId) {
+      // Ищем существующего пациента по жетону или ФИО+Дата рождения
+      const matchConditions = [];
+      if (tokenNumber && tokenNumber.trim() !== '') {
+        matchConditions.push({ tokenNumber: tokenNumber.trim() });
+      }
+      if (fullName && birthDate) {
+        // Убираем лишние пробелы и приводим к нижнему регистру не получится легко в Prisma SQLite без raw,
+        // поэтому ищем точное совпадение
+        matchConditions.push({
+          fullName: fullName.trim(),
+          birthDate: new Date(birthDate)
+        });
+      }
+
+      if (matchConditions.length > 0) {
+        const existingPatient = await prisma.patient.findFirst({
+          where: { OR: matchConditions },
+          orderBy: { createdAt: 'desc' }
+        });
+        if (existingPatient && existingPatient.personId) {
+          finalPersonId = existingPatient.personId;
+        }
+      }
+    }
+    
     const newPatient = await prisma.patient.create({
       data: {
-        personId: personId || undefined,
+        personId: finalPersonId || undefined,
         tokenNumber,
         caseHistoryNumber,
         rank,
