@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { api } from '../api';
 import { Save, ArrowLeft } from 'lucide-react';
 import DatePicker from 'react-datepicker';
@@ -23,17 +23,20 @@ export const DEPARTMENTS = [
 export default function PatientForm() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const isEditing = Boolean(id);
+  const readmissionData = location.state?.readmissionData || null;
   
   const [formData, setFormData] = useState({
-    tokenNumber: '',
+    personId: readmissionData?.personId || '',
+    tokenNumber: readmissionData?.tokenNumber || '',
     caseHistoryNumber: '',
-    rank: '',
-    militaryUnit: '',
-    militaryStatus: 'Призыв',
-    isSvoParticipant: false,
-    fullName: '',
-    address: '',
+    rank: readmissionData?.rank || '',
+    militaryUnit: readmissionData?.militaryUnit || '',
+    militaryStatus: readmissionData?.militaryStatus || 'Призыв',
+    isSvoParticipant: readmissionData?.isSvoParticipant || false,
+    fullName: readmissionData?.fullName || '',
+    address: readmissionData?.address || '',
     admissionDiagnosis: '',
     clinicalDiagnosis: '',
     finalDiagnosis: '',
@@ -43,7 +46,7 @@ export default function PatientForm() {
   });
   
   const [admissionDate, setAdmissionDate] = useState(new Date());
-  const [birthDate, setBirthDate] = useState(null);
+  const [birthDate, setBirthDate] = useState(readmissionData?.birthDate ? new Date(readmissionData.birthDate) : null);
 
   const [loading, setLoading] = useState(isEditing);
 

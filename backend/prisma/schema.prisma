@@ -10,49 +10,77 @@ datasource db {
   url      = "file:../data/database.sqlite"
 }
 
-model Patient {
-  id                  String     @id @default(uuid())
-  tokenNumber         String?    // Личный номер (жетон)
-  caseHistoryNumber    String?    // Номер карты (истории болезни)
-  rank                String?    // Звание
-  militaryUnit        String?    // № в/ч
-  militaryStatus      String?    // 'Призыв' или 'Контракт'
-  isSvoParticipant    Boolean    @default(false)
-  fullName            String
-  birthDate           DateTime
-  address             String?
-  admissionDiagnosis  String?    // Диагноз при поступлении
-  clinicalDiagnosis   String?    // Клинический диагноз
-  finalDiagnosis      String?    // Заключительный диагноз
-  complications       String?    // Осложнения и сопутствующие
-  department          String     // Текущее отделение
-  admissionDate       DateTime   @default(now())
-  dischargeDate       DateTime?  // Дата выписки
-  dischargeDestination String?   // Куда выписан/переведен
-  status              String     @default("На лечении") // На лечении, Выписан, В архиве
-  createdAt           DateTime   @default(now())
-  updatedAt           DateTime   @updatedAt
+model User {
+  id           String   @id @default(uuid())
+  username     String   @unique
+  passwordHash String
+  role         String   @default("DOCTOR") // ADMIN, DOCTOR
+  createdAt    DateTime @default(now())
 
-  documents           Document[]
-  transfers           TransferHistory[]
+  documents Document[]
+  logs      AuditLog[]
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String
+  action    String // CREATE, UPDATE, DELETE, UPLOAD
+  entity    String // Patient, Document, User
+  entityId  String?
+  details   String? // JSON stringified details
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Patient {
+  id                   String    @id @default(uuid())
+  personId             String?   @default(uuid()) // Объединяет разные госпитализации одного человека
+  tokenNumber          String? // Личный номер (жетон)
+  caseHistoryNumber    String? // Номер карты (истории болезни)
+  rank                 String? // Звание
+  militaryUnit         String? // № в/ч
+  militaryStatus       String? // 'Призыв' или 'Контракт'
+  isSvoParticipant     Boolean   @default(false)
+  fullName             String
+  birthDate            DateTime
+  address              String?
+  admissionDiagnosis   String? // Диагноз при поступлении
+  clinicalDiagnosis    String? // Клинический диагноз
+  finalDiagnosis       String? // Заключительный диагноз
+  complications        String? // Осложнения и сопутствующие
+  department           String // Текущее отделение
+  admissionDate        DateTime  @default(now())
+  dischargeDate        DateTime? // Дата выписки
+  dischargeDestination String? // Куда выписан/переведен
+  status               String    @default("На лечении") // На лечении, Выписан, В архиве
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  documents Document[]
+  transfers TransferHistory[]
 }
 
 model Document {
-  id           String   @id @default(uuid())
-  filename     String   // Имя файла на диске (санитаризированное)
-  originalName String   // Оригинальное имя при загрузке
+  id           String  @id @default(uuid())
+  filename     String // Имя файла на диске (санитаризированное)
+  originalName String // Оригинальное имя при загрузке
   mimeType     String
   size         Int
   patientId    String
-  patient      Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  createdAt    DateTime @default(now())
+  personId     String? // Для связи со всеми госпитализациями человека
+  uploadedById String?
+
+  patient   Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  uploader  User?    @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
 }
 
 model TransferHistory {
-  id              String   @id @default(uuid())
-  patientId       String
-  fromDepartment  String?  // Из какого отделения (null, если это первичное поступление)
-  toDepartment    String   // В какое отделение
-  transferDate    DateTime @default(now())
-  patient         Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  id             String   @id @default(uuid())
+  patientId      String
+  fromDepartment String? // Из какого отделения (null, если это первичное поступление)
+  toDepartment   String // В какое отделение
+  transferDate   DateTime @default(now())
+  patient        Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
 }

@@ -1,10 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Edit2, Trash2, Upload, File as FileIcon, ExternalLink, RefreshCw, LogOut, FileText, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Edit2, Trash2, Upload, File as FileIcon, ExternalLink, RefreshCw, LogOut, FileText, AlertCircle, Download, FilePlus, X } from 'lucide-react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { ru } from 'date-fns/locale';
 import { api } from '../api';
+import { useAuth } from '../context/AuthContext';
+import { Document, Page, pdfjs } from 'react-pdf';
+import 'react-pdf/dist/Page/AnnotationLayer.css';
+import 'react-pdf/dist/Page/TextLayer.css';
+
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 import { DEPARTMENTS } from './PatientForm';
 import ICD10Autocomplete from '../components/ICD10Autocomplete';
 
@@ -29,6 +35,10 @@ export default function PatientProfile() {
     destination: '',
     finalDiagnosis: ''
   });
+  
+  const [viewingFile, setViewingFile] = useState(null);
+  const [numPages, setNumPages] = useState(null);
+  const [pageNumber, setPageNumber] = useState(1);
 
   useEffect(() => {
     fetchPatient();
@@ -114,6 +124,17 @@ export default function PatientProfile() {
     }
   };
 
+  const handleFileClick = (e, doc) => {
+    e.preventDefault();
+    if (doc.mimeType.startsWith('image/') || doc.mimeType === 'application/pdf') {
+      setViewingFile(doc);
+      setPageNumber(1);
+      setNumPages(null);
+    } else {
+      window.open(api.getDocumentUrl(doc.id), '_blank');
+    }
+  };
+
   const handleTransfer = async () => {
     try {
       await api.transferPatient(id, transferData.department, transferData.date.toISOString());
@@ -137,6 +158,24 @@ export default function PatientProfile() {
     } catch (error) {
       alert('Ошибка при выписке');
     }
+  };
+
+  const handleReadmission = () => {
+    navigate('/patients/new', { 
+      state: { 
+        readmissionData: {
+          personId: patient.personId,
+          fullName: patient.fullName,
+          birthDate: patient.birthDate,
+          tokenNumber: patient.tokenNumber,
+          rank: patient.rank,
+          militaryUnit: patient.militaryUnit,
+          militaryStatus: patient.militaryStatus,
+          isSvoParticipant: patient.isSvoParticipant,
+          address: patient.address
+        }
+      }
+    });
   };
 
   if (loading || !patient) return <div className="p-6 text-center text-muted">Загрузка...</div>;
@@ -167,7 +206,7 @@ export default function PatientProfile() {
         </div>
         
         <div className="flex gap-2" style={{ flexWrap: 'wrap' }}>
-          {patient.status === 'На лечении' && (
+          {patient.status === 'На лечении' ? (
             <>
               <button className="btn btn-outline" style={{ color: 'var(--primary-hover)', borderColor: 'var(--primary-light)' }} onClick={() => { setShowTransfer(!showTransfer); setShowDischarge(false); }}>
                 <RefreshCw size={14} /> Перевод в другое отд.
@@ -176,6 +215,10 @@ export default function PatientProfile() {
                 <LogOut size={14} /> Выписка / Перевод
               </button>
             </>
+          ) : (
+            <button className="btn btn-outline" style={{ color: 'var(--primary-hover)', borderColor: 'var(--primary-light)' }} onClick={handleReadmission}>
+              <FilePlus size={14} /> Повторная госпитализация
+            </button>
           )}
           <button className="btn btn-outline" onClick={() => navigate(`/patients/${id}/edit`)}>
             <Edit2 size={14} /> Изменить
@@ -401,14 +444,22 @@ export default function PatientProfile() {
                   <div className="flex items-center gap-2" style={{ overflow: 'hidden' }}>
                     <FileIcon size={16} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
                     <div className="flex-col" style={{ overflow: 'hidden' }}>
-                      <a href={api.getDocumentUrl(doc.id)} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: 'var(--text-main)', fontSize: '0.8rem', fontWeight: 500, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+                      <a href="#" onClick={(e) => handleFileClick(e, doc)} style={{ textDecoration: 'none', color: 'var(--text-main)', fontSize: '0.8rem', fontWeight: 500, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
                         {doc.originalName}
                       </a>
+                      <div className="text-muted text-xs mt-1">
+                        {new Date(doc.createdAt).toLocaleDateString()} {doc.uploader?.username ? `• загрузил(а) ${doc.uploader.username}` : ''}
+                      </div>
                     </div>
                   </div>
-                  <button className="btn btn-icon" style={{ color: 'var(--danger)', background: 'transparent', padding: '0.2rem' }} onClick={() => handleDeleteDocument(doc.id)}>
-                    <Trash2 size={14} />
-                  </button>
+                  <div className="flex gap-1">
+                    <a href={api.getDocumentUrl(doc.id)} className="btn btn-icon" style={{ color: 'var(--primary)', background: 'transparent', padding: '0.2rem' }} title="Скачать">
+                      <Download size={14} />
+                    </a>
+                    <button className="btn btn-icon" style={{ color: 'var(--danger)', background: 'transparent', padding: '0.2rem' }} onClick={() => handleDeleteDocument(doc.id)} title="Удалить">
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 </div>
               ))
             )}
@@ -416,6 +467,54 @@ export default function PatientProfile() {
         </div>
 
       </div>
+
+      {/* File Viewer Modal */}
+      {viewingFile && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', zIndex: 9999, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', background: 'rgba(0,0,0,0.7)', color: 'white' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <FileIcon size={20} />
+              <span style={{ fontWeight: 600 }}>{viewingFile.originalName}</span>
+            </div>
+            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+              {viewingFile.mimeType === 'application/pdf' && numPages && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginRight: '1rem', background: 'rgba(255,255,255,0.1)', padding: '0.2rem 1rem', borderRadius: '16px' }}>
+                  <button className="btn btn-icon text-white" disabled={pageNumber <= 1} onClick={() => setPageNumber(p => p - 1)}>&lt;</button>
+                  <span style={{ fontSize: '0.9rem' }}>Стр. {pageNumber} из {numPages}</span>
+                  <button className="btn btn-icon text-white" disabled={pageNumber >= numPages} onClick={() => setPageNumber(p => p + 1)}>&gt;</button>
+                </div>
+              )}
+              <a href={api.getDocumentUrl(viewingFile.id)} className="btn btn-outline" style={{ color: 'white', borderColor: 'rgba(255,255,255,0.3)' }} title="Скачать">
+                <Download size={16} /> Скачать
+              </a>
+              <button className="btn btn-icon" style={{ color: 'white', background: 'rgba(255,255,255,0.1)' }} onClick={() => setViewingFile(null)}>
+                <X size={20} />
+              </button>
+            </div>
+          </div>
+          <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '1rem', overflow: 'auto' }}>
+            {viewingFile.mimeType.startsWith('image/') ? (
+              <img src={`${api.getDocumentUrl(viewingFile.id)}?inline=true`} alt={viewingFile.originalName} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', boxShadow: '0 10px 25px rgba(0,0,0,0.5)' }} />
+            ) : (
+              <div style={{ background: '#333', padding: '1rem', borderRadius: '8px', overflow: 'auto', maxHeight: '100%', display: 'flex', justifyContent: 'center' }}>
+                <Document
+                  file={{ url: `${api.getDocumentUrl(viewingFile.id)}?inline=true`, withCredentials: true }}
+                  onLoadSuccess={({ numPages }) => setNumPages(numPages)}
+                  loading={<div className="text-white p-8">Загрузка PDF...</div>}
+                >
+                  <Page 
+                    pageNumber={pageNumber} 
+                    renderTextLayer={true} 
+                    renderAnnotationLayer={true} 
+                    width={Math.min(window.innerWidth * 0.9, 900)}
+                    className="shadow-lg"
+                  />
+                </Document>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

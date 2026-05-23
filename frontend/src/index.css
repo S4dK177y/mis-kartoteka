@@ -60,6 +60,54 @@ body {
   from { opacity: 0; transform: translateY(15px); }
   to { opacity: 1; transform: translateY(0); }
 }
+@keyframes float {
+  0% { transform: translateY(0px) translateX(0px); }
+  33% { transform: translateY(-20px) translateX(10px); }
+  66% { transform: translateY(10px) translateX(-15px); }
+  100% { transform: translateY(0px) translateX(0px); }
+}
+
+.auth-background {
+  background-color: #f8fafc;
+  background-image: 
+    radial-gradient(circle at 15% 50%, rgba(14, 165, 233, 0.15), transparent 25%),
+    radial-gradient(circle at 85% 30%, rgba(16, 185, 129, 0.15), transparent 25%);
+  min-height: 100vh;
+  width: 100vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  overflow: hidden;
+}
+
+.auth-background::before, .auth-background::after {
+  content: '';
+  position: absolute;
+  width: 60vw;
+  height: 60vw;
+  border-radius: 50%;
+  z-index: -1;
+  filter: blur(80px);
+  animation: float 15s ease-in-out infinite;
+  opacity: 0.5;
+}
+
+.auth-background::before {
+  background: rgba(14, 165, 233, 0.3);
+  top: -20%;
+  left: -10%;
+}
+
+.auth-background::after {
+  background: rgba(16, 185, 129, 0.2);
+  bottom: -20%;
+  right: -10%;
+  animation-delay: -5s;
+}
 
 .animate-fade-in {
   animation: fadeIn 0.5s ease-out forwards;
@@ -246,8 +294,13 @@ select.input-field {
   grid-template-columns: 1fr 1fr 1fr;
   gap: 1.5rem;
 }
-@media (max-width: 768px) {
-  .grid-2, .grid-3 {
+.grid-layout-admin {
+  display: grid;
+  grid-template-columns: minmax(300px, 1fr) 2fr;
+  gap: 2rem;
+}
+@media (max-width: 900px) {
+  .grid-2, .grid-3, .grid-layout-admin {
     grid-template-columns: 1fr;
   }
 }

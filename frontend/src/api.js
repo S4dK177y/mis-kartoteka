@@ -2,21 +2,109 @@
 // Use relative path so it works from any IP on the network (fallback to localhost for dev)
 const API_URL = import.meta.env.DEV ? 'http://localhost:8080/api' : '/api';
 
+const fetchWithAuth = async (url, options = {}) => {
+  const res = await fetch(url, {
+    ...options,
+    credentials: 'include' // Always send HTTP-only cookies
+  });
+
+  if (res.status === 401) {
+    // Unauthorized - token missing or expired
+    if (window.location.pathname !== '/login' && window.location.pathname !== '/setup') {
+      window.location.href = '/login';
+    }
+    throw new Error('Unauthorized');
+  }
+
+  return res;
+};
+
 export const api = {
+  // --- AUTH ---
+  checkSystemStatus: async () => {
+    const res = await fetchWithAuth(`${API_URL}/system/status`);
+    if (!res.ok) throw new Error('Failed to check status');
+    return res.json();
+  },
+  
+  setupSystem: async (username, password) => {
+    const res = await fetchWithAuth(`${API_URL}/auth/setup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    if (!res.ok) throw new Error('Setup failed');
+    return res.json();
+  },
+
+  login: async (username, password) => {
+    const res = await fetchWithAuth(`${API_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    if (!res.ok) throw new Error('Invalid credentials');
+    return res.json();
+  },
+
+  logout: async () => {
+    await fetchWithAuth(`${API_URL}/auth/logout`, { method: 'POST' });
+  },
+
+  getCurrentUser: async () => {
+    const res = await fetchWithAuth(`${API_URL}/auth/me`);
+    if (!res.ok) throw new Error('Not logged in');
+    return res.json();
+  },
+
+  // --- ADMIN ---
+  getUsers: async () => {
+    const res = await fetchWithAuth(`${API_URL}/users`);
+    if (!res.ok) throw new Error('Failed to fetch users');
+    return res.json();
+  },
+
+  createUser: async (username, password, role) => {
+    const res = await fetchWithAuth(`${API_URL}/users`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password, role })
+    });
+    if (!res.ok) throw new Error('Failed to create user');
+    return res.json();
+  },
+
+  updateUserRole: async (userId, role) => {
+    const res = await fetchWithAuth(`${API_URL}/users/${userId}/role`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role })
+    });
+    if (!res.ok) throw new Error('Failed to update role');
+    return res.json();
+  },
+
+  getLogs: async () => {
+    const res = await fetchWithAuth(`${API_URL}/logs`);
+    if (!res.ok) throw new Error('Failed to fetch logs');
+    return res.json();
+  },
+
+  // --- PATIENTS ---
   getPatients: async () => {
-    const res = await fetch(`${API_URL}/patients`);
+    const res = await fetchWithAuth(`${API_URL}/patients`);
     if (!res.ok) throw new Error('Failed to fetch patients');
     return res.json();
   },
   
   getPatient: async (id) => {
-    const res = await fetch(`${API_URL}/patients/${id}`);
+    const res = await fetchWithAuth(`${API_URL}/patients/${id}`);
     if (!res.ok) throw new Error('Failed to fetch patient');
     return res.json();
   },
   
   createPatient: async (data) => {
-    const res = await fetch(`${API_URL}/patients`, {
+    const res = await fetchWithAuth(`${API_URL}/patients`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
@@ -26,7 +114,7 @@ export const api = {
   },
   
   updatePatient: async (id, data) => {
-    const res = await fetch(`${API_URL}/patients/${id}`, {
+    const res = await fetchWithAuth(`${API_URL}/patients/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
@@ -36,7 +124,7 @@ export const api = {
   },
   
   transferPatient: async (id, toDepartment, transferDate) => {
-    const res = await fetch(`${API_URL}/patients/${id}/transfer`, {
+    const res = await fetchWithAuth(`${API_URL}/patients/${id}/transfer`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ toDepartment, transferDate })
@@ -46,15 +134,16 @@ export const api = {
   },
   
   deletePatient: async (id) => {
-    const res = await fetch(`${API_URL}/patients/${id}`, { method: 'DELETE' });
+    const res = await fetchWithAuth(`${API_URL}/patients/${id}`, { method: 'DELETE' });
     if (!res.ok) throw new Error('Failed to delete patient');
   },
   
+  // --- DOCUMENTS ---
   uploadDocument: async (patientId, file) => {
     const formData = new FormData();
     formData.append('file', file);
     
-    const res = await fetch(`${API_URL}/patients/${patientId}/documents`, {
+    const res = await fetchWithAuth(`${API_URL}/patients/${patientId}/documents`, {
       method: 'POST',
       body: formData
     });
@@ -63,7 +152,7 @@ export const api = {
   },
   
   deleteDocument: async (id) => {
-    const res = await fetch(`${API_URL}/documents/${id}`, { method: 'DELETE' });
+    const res = await fetchWithAuth(`${API_URL}/documents/${id}`, { method: 'DELETE' });
     if (!res.ok) throw new Error('Failed to delete document');
   },
   
