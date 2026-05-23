@@ -78,7 +78,7 @@ app.get('/api/patients/:id', async (req, res) => {
 app.post('/api/patients', async (req, res) => {
   try {
     const { 
-      tokenNumber, caseHistoryNumber, fullName, birthDate, address, 
+      tokenNumber, caseHistoryNumber, rank, militaryUnit, fullName, birthDate, address, 
       admissionDiagnosis, clinicalDiagnosis, finalDiagnosis, 
       department, admissionDate 
     } = req.body;
@@ -87,6 +87,8 @@ app.post('/api/patients', async (req, res) => {
       data: {
         tokenNumber,
         caseHistoryNumber,
+        rank,
+        militaryUnit,
         fullName,
         birthDate: new Date(birthDate),
         address,
@@ -114,7 +116,7 @@ app.post('/api/patients', async (req, res) => {
 app.put('/api/patients/:id', async (req, res) => {
   try {
     const { 
-      tokenNumber, caseHistoryNumber, fullName, birthDate, address, 
+      tokenNumber, caseHistoryNumber, rank, militaryUnit, fullName, birthDate, address, 
       admissionDiagnosis, clinicalDiagnosis, finalDiagnosis, 
       department, admissionDate, dischargeDate, dischargeDestination, status 
     } = req.body;
@@ -124,6 +126,8 @@ app.put('/api/patients/:id', async (req, res) => {
       data: {
         tokenNumber,
         caseHistoryNumber,
+        rank,
+        militaryUnit,
         fullName,
         birthDate: birthDate ? new Date(birthDate) : undefined,
         address,
@@ -248,17 +252,20 @@ app.get('/api/export/patients', async (req, res) => {
     const workbook = new exceljs.Workbook();
     const worksheet = workbook.addWorksheet('Пациенты');
 
+    // Excel column order:
+    // № ИБ, Дата поступления, Звание, ФИО, Дата рождения, Жетон, № в/ч, Д/з при поступлении, Клинический Д/з, Заключительный Д/з, Отделение, Статус, Дата выписки, Куда выписан.
     worksheet.columns = [
-      { header: 'Жетон', key: 'tokenNumber', width: 15 },
       { header: '№ ИБ', key: 'caseHistoryNumber', width: 15 },
+      { header: 'Дата поступления', key: 'admissionDate', width: 20 },
+      { header: 'Звание', key: 'rank', width: 15 },
       { header: 'ФИО', key: 'fullName', width: 30 },
       { header: 'Дата рождения', key: 'birthDate', width: 15 },
-      { header: 'Адрес', key: 'address', width: 30 },
+      { header: 'Жетон', key: 'tokenNumber', width: 15 },
+      { header: '№ в/ч', key: 'militaryUnit', width: 15 },
       { header: 'Д/з при поступлении', key: 'admissionDiagnosis', width: 30 },
       { header: 'Клинический Д/з', key: 'clinicalDiagnosis', width: 30 },
       { header: 'Заключительный Д/з', key: 'finalDiagnosis', width: 30 },
       { header: 'Отделение', key: 'department', width: 25 },
-      { header: 'Дата поступления', key: 'admissionDate', width: 20 },
       { header: 'Статус', key: 'status', width: 15 },
       { header: 'Дата выписки', key: 'dischargeDate', width: 20 },
       { header: 'Куда выписан/переведен', key: 'dischargeDestination', width: 30 }
@@ -266,21 +273,28 @@ app.get('/api/export/patients', async (req, res) => {
 
     patients.forEach(p => {
       worksheet.addRow({
-        tokenNumber: p.tokenNumber || '',
         caseHistoryNumber: p.caseHistoryNumber || '',
+        admissionDate: p.admissionDate.toISOString().replace('T', ' ').substring(0, 16),
+        rank: p.rank || '',
         fullName: p.fullName,
         birthDate: p.birthDate.toISOString().split('T')[0],
-        address: p.address || '',
+        tokenNumber: p.tokenNumber || '',
+        militaryUnit: p.militaryUnit || '',
         admissionDiagnosis: p.admissionDiagnosis || '',
         clinicalDiagnosis: p.clinicalDiagnosis || '',
         finalDiagnosis: p.finalDiagnosis || '',
         department: p.department,
-        admissionDate: p.admissionDate.toISOString().replace('T', ' ').substring(0, 16),
         status: p.status,
         dischargeDate: p.dischargeDate ? p.dischargeDate.toISOString().replace('T', ' ').substring(0, 16) : '',
         dischargeDestination: p.dischargeDestination || ''
       });
     });
+
+    // AutoFilter for all columns
+    worksheet.autoFilter = {
+      from: 'A1',
+      to: 'N1'
+    };
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', 'attachment; filename="patients.xlsx"');

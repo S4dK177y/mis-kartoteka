@@ -14,6 +14,8 @@ model Patient {
   id                  String     @id @default(uuid())
   tokenNumber         String?    // Личный номер (жетон)
   caseHistoryNumber    String?    // Номер карты (истории болезни)
+  rank                String?    // Звание
+  militaryUnit        String?    // № в/ч
   fullName            String
   birthDate           DateTime
   address             String?
