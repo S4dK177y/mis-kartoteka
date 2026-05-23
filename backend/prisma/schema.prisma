@@ -11,17 +11,22 @@ datasource db {
 }
 
 model Patient {
-  id            String     @id @default(uuid())
-  fullName      String
-  birthDate     DateTime
-  address       String?
-  diagnosis     String?
-  admissionDate DateTime   @default(now())
-  status        String     @default("Активен") // Активен, Выписан, В архиве
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  id                  String     @id @default(uuid())
+  tokenNumber         String?    // Личный номер (жетон)
+  fullName            String
+  birthDate           DateTime
+  address             String?
+  diagnosis           String?
+  department          String     // Текущее отделение
+  admissionDate       DateTime   @default(now())
+  dischargeDate       DateTime?  // Дата выписки
+  dischargeDestination String?   // Куда выписан/переведен
+  status              String     @default("На лечении") // На лечении, Выписан, В архиве
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
 
-  documents     Document[]
+  documents           Document[]
+  transfers           TransferHistory[]
 }
 
 model Document {
@@ -33,4 +38,13 @@ model Document {
   patientId    String
   patient      Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
   createdAt    DateTime @default(now())
+}
+
+model TransferHistory {
+  id              String   @id @default(uuid())
+  patientId       String
+  fromDepartment  String?  // Из какого отделения (null, если это первичное поступление)
+  toDepartment    String   // В какое отделение
+  transferDate    DateTime @default(now())
+  patient         Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
 }

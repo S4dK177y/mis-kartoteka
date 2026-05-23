@@ -34,6 +34,16 @@ export const api = {
     return res.json();
   },
   
+  transferPatient: async (id, toDepartment) => {
+    const res = await fetch(`${API_URL}/patients/${id}/transfer`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ toDepartment })
+    });
+    if (!res.ok) throw new Error('Failed to transfer patient');
+    return res.json();
+  },
+  
   deletePatient: async (id) => {
     const res = await fetch(`${API_URL}/patients/${id}`, { method: 'DELETE' });
     if (!res.ok) throw new Error('Failed to delete patient');

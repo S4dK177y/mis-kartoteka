@@ -31,8 +31,11 @@ const storage = multer.diskStorage({
     cb(null, patientDir);
   },
   filename: (req, file, cb) => {
+    // Decode original name from latin1 to utf8 (fix for Cyrillic filenames)
+    file.originalname = Buffer.from(file.originalname, 'latin1').toString('utf8');
+    
     // Sanitize filename
-    const sanitizedName = file.originalname.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+    const sanitizedName = file.originalname.replace(/[^a-zA-Zа-яА-Я0-9.\-_ ]/g, '_');
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
     cb(null, uniqueSuffix + '-' + sanitizedName);
   }
@@ -59,7 +62,10 @@ app.get('/api/patients/:id', async (req, res) => {
   try {
     const patient = await prisma.patient.findUnique({
       where: { id: req.params.id },
-      include: { documents: true }
+      include: { 
+        documents: { orderBy: { createdAt: 'desc' } },
+        transfers: { orderBy: { transferDate: 'desc' } }
+      }
     });
     if (!patient) return res.status(404).json({ error: 'Patient not found' });
     res.json(patient);
@@ -71,14 +77,24 @@ app.get('/api/patients/:id', async (req, res) => {
 // Create a new patient
 app.post('/api/patients', async (req, res) => {
   try {
-    const { fullName, birthDate, address, diagnosis, status } = req.body;
+    const { tokenNumber, fullName, birthDate, address, diagnosis, department, admissionDate } = req.body;
+    
     const newPatient = await prisma.patient.create({
       data: {
+        tokenNumber,
         fullName,
         birthDate: new Date(birthDate),
         address,
         diagnosis,
-        status: status || 'Активен'
+        department,
+        admissionDate: admissionDate ? new Date(admissionDate) : new Date(),
+        status: 'На лечении',
+        transfers: {
+          create: {
+            toDepartment: department,
+            transferDate: admissionDate ? new Date(admissionDate) : new Date()
+          }
+        }
       }
     });
     res.status(201).json(newPatient);
@@ -90,20 +106,54 @@ app.post('/api/patients', async (req, res) => {
 // Update a patient
 app.put('/api/patients/:id', async (req, res) => {
   try {
-    const { fullName, birthDate, address, diagnosis, status } = req.body;
+    const { tokenNumber, fullName, birthDate, address, diagnosis, department, admissionDate, dischargeDate, dischargeDestination, status } = req.body;
+    
     const updatedPatient = await prisma.patient.update({
       where: { id: req.params.id },
       data: {
+        tokenNumber,
         fullName,
         birthDate: birthDate ? new Date(birthDate) : undefined,
         address,
         diagnosis,
+        department,
+        admissionDate: admissionDate ? new Date(admissionDate) : undefined,
+        dischargeDate: dischargeDate ? new Date(dischargeDate) : null,
+        dischargeDestination: dischargeDestination || null,
         status
       }
     });
     res.json(updatedPatient);
   } catch (error) {
     res.status(400).json({ error: 'Bad Request', details: error.message });
+  }
+});
+
+// Transfer a patient
+app.post('/api/patients/:id/transfer', async (req, res) => {
+  try {
+    const { toDepartment } = req.body;
+    if (!toDepartment) return res.status(400).json({ error: 'toDepartment is required' });
+    
+    const patient = await prisma.patient.findUnique({ where: { id: req.params.id } });
+    if (!patient) return res.status(404).json({ error: 'Patient not found' });
+    
+    const updatedPatient = await prisma.patient.update({
+      where: { id: req.params.id },
+      data: {
+        department: toDepartment,
+        transfers: {
+          create: {
+            fromDepartment: patient.department,
+            toDepartment: toDepartment,
+            transferDate: new Date()
+          }
+        }
+      }
+    });
+    res.json(updatedPatient);
+  } catch (error) {
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -185,24 +235,30 @@ app.get('/api/export/patients', async (req, res) => {
     const worksheet = workbook.addWorksheet('Пациенты');
 
     worksheet.columns = [
-      { header: 'ID', key: 'id', width: 10 },
+      { header: 'Жетон', key: 'tokenNumber', width: 15 },
       { header: 'ФИО', key: 'fullName', width: 30 },
       { header: 'Дата рождения', key: 'birthDate', width: 15 },
       { header: 'Адрес', key: 'address', width: 30 },
       { header: 'Диагноз', key: 'diagnosis', width: 30 },
+      { header: 'Отделение', key: 'department', width: 25 },
       { header: 'Дата поступления', key: 'admissionDate', width: 15 },
-      { header: 'Статус', key: 'status', width: 15 }
+      { header: 'Статус', key: 'status', width: 15 },
+      { header: 'Дата выписки', key: 'dischargeDate', width: 15 },
+      { header: 'Куда выписан/переведен', key: 'dischargeDestination', width: 30 }
     ];
 
     patients.forEach(p => {
       worksheet.addRow({
-        id: p.id,
+        tokenNumber: p.tokenNumber || '',
         fullName: p.fullName,
         birthDate: p.birthDate.toISOString().split('T')[0],
         address: p.address || '',
         diagnosis: p.diagnosis || '',
+        department: p.department,
         admissionDate: p.admissionDate.toISOString().split('T')[0],
-        status: p.status
+        status: p.status,
+        dischargeDate: p.dischargeDate ? p.dischargeDate.toISOString().split('T')[0] : '',
+        dischargeDestination: p.dischargeDestination || ''
       });
     });
 

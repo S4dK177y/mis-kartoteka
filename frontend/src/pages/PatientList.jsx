@@ -26,7 +26,8 @@ export default function PatientList() {
 
   const filteredPatients = patients.filter(p => 
     p.fullName.toLowerCase().includes(search.toLowerCase()) || 
-    (p.diagnosis && p.diagnosis.toLowerCase().includes(search.toLowerCase()))
+    (p.diagnosis && p.diagnosis.toLowerCase().includes(search.toLowerCase())) ||
+    (p.tokenNumber && p.tokenNumber.toLowerCase().includes(search.toLowerCase()))
   );
 
   return (
@@ -40,7 +41,7 @@ export default function PatientList() {
             <input 
               type="text" 
               className="input-field" 
-              placeholder="Поиск по ФИО или диагнозу..."
+              placeholder="Поиск по ФИО, жетону или диагнозу..."
               style={{ paddingLeft: '40px' }}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -62,8 +63,9 @@ export default function PatientList() {
           <table>
             <thead>
               <tr>
+                <th>Жетон</th>
                 <th>ФИО</th>
-                <th>Дата рождения</th>
+                <th>Отделение</th>
                 <th>Диагноз</th>
                 <th>Дата поступления</th>
                 <th>Статус</th>
@@ -72,12 +74,13 @@ export default function PatientList() {
             <tbody>
               {filteredPatients.map(patient => (
                 <tr key={patient.id} onClick={() => navigate(`/patients/${patient.id}`)}>
+                  <td className="text-muted">{patient.tokenNumber || '—'}</td>
                   <td style={{ fontWeight: 500, color: 'var(--primary-hover)' }}>{patient.fullName}</td>
-                  <td>{new Date(patient.birthDate).toLocaleDateString('ru-RU')}</td>
+                  <td>{patient.department}</td>
                   <td>{patient.diagnosis || '—'}</td>
                   <td>{new Date(patient.admissionDate).toLocaleDateString('ru-RU')}</td>
                   <td>
-                    <span className={`badge ${patient.status === 'Активен' ? 'badge-active' : 'badge-archived'}`}>
+                    <span className={`badge ${patient.status === 'На лечении' ? 'badge-active' : 'badge-archived'}`}>
                       {patient.status}
                     </span>
                   </td>
