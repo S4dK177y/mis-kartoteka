@@ -1,31 +1,29 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
-import { Users, Activity } from 'lucide-react';
+import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { Activity, Plus } from 'lucide-react';
 import PatientList from './pages/PatientList';
-import PatientProfile from './pages/PatientProfile';
 import PatientForm from './pages/PatientForm';
+import PatientProfile from './pages/PatientProfile';
+import './index.css';
 
 function App() {
   return (
-    <BrowserRouter>
+    <Router>
       <div className="app-container">
-        <header className="app-header">
-          <Link to="/" className="app-title">
-            <div className="app-title-icon">
-              <Activity size={28} />
+        <header className="header">
+          <Link to="/" className="header-logo">
+            <div style={{ background: 'var(--primary)', color: 'white', padding: '6px', borderRadius: '10px', display: 'flex' }}>
+              <Activity size={24} />
             </div>
-            <span>МедКартотека</span>
+            МедКартотека
           </Link>
-          
-          <nav>
-            <Link to="/patients/new" className="btn btn-primary">
-              <Users size={18} />
-              Новый пациент
-            </Link>
-          </nav>
+          <Link to="/patients/new" className="btn btn-primary">
+            <Plus size={18} />
+            Новый пациент
+          </Link>
         </header>
-
-        <main>
+        
+        <main className="main-content">
           <Routes>
             <Route path="/" element={<PatientList />} />
             <Route path="/patients/new" element={<PatientForm />} />
@@ -34,7 +32,7 @@ function App() {
           </Routes>
         </main>
       </div>
-    </BrowserRouter>
+    </Router>
   );
 }
 

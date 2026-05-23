@@ -1,5 +1,6 @@
 // api.js - Simple fetch wrapper for API
-const API_URL = 'http://localhost:8080/api';
+// Use relative path so it works from any IP on the network (fallback to localhost for dev)
+const API_URL = import.meta.env.DEV ? 'http://localhost:8080/api' : '/api';
 
 export const api = {
   getPatients: async () => {
@@ -34,11 +35,11 @@ export const api = {
     return res.json();
   },
   
-  transferPatient: async (id, toDepartment) => {
+  transferPatient: async (id, toDepartment, transferDate) => {
     const res = await fetch(`${API_URL}/patients/${id}/transfer`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ toDepartment })
+      body: JSON.stringify({ toDepartment, transferDate })
     });
     if (!res.ok) throw new Error('Failed to transfer patient');
     return res.json();

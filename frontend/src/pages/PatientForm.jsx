@@ -15,6 +15,15 @@ export const DEPARTMENTS = [
   'Госпитальное отделение (ГО)'
 ];
 
+const formatDateTimeLocal = (isoString) => {
+  if (!isoString) return '';
+  const date = new Date(isoString);
+  // format: YYYY-MM-DDThh:mm
+  const offset = date.getTimezoneOffset() * 60000;
+  const localISOTime = (new Date(date.getTime() - offset)).toISOString().slice(0, 16);
+  return localISOTime;
+};
+
 export default function PatientForm() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -22,12 +31,15 @@ export default function PatientForm() {
   
   const [formData, setFormData] = useState({
     tokenNumber: '',
+    caseHistoryNumber: '',
     fullName: '',
     birthDate: '',
     address: '',
-    diagnosis: '',
+    admissionDiagnosis: '',
+    clinicalDiagnosis: '',
+    finalDiagnosis: '',
     department: DEPARTMENTS[0],
-    admissionDate: new Date().toISOString().split('T')[0],
+    admissionDate: formatDateTimeLocal(new Date().toISOString()),
     status: 'На лечении'
   });
   const [loading, setLoading] = useState(isEditing);
@@ -43,12 +55,15 @@ export default function PatientForm() {
       const data = await api.getPatient(id);
       setFormData({
         tokenNumber: data.tokenNumber || '',
+        caseHistoryNumber: data.caseHistoryNumber || '',
         fullName: data.fullName,
         birthDate: data.birthDate.split('T')[0],
         address: data.address || '',
-        diagnosis: data.diagnosis || '',
+        admissionDiagnosis: data.admissionDiagnosis || '',
+        clinicalDiagnosis: data.clinicalDiagnosis || '',
+        finalDiagnosis: data.finalDiagnosis || '',
         department: data.department || DEPARTMENTS[0],
-        admissionDate: data.admissionDate ? data.admissionDate.split('T')[0] : new Date().toISOString().split('T')[0],
+        admissionDate: formatDateTimeLocal(data.admissionDate),
         status: data.status
       });
     } catch (error) {
@@ -67,11 +82,17 @@ export default function PatientForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      // transform datetime-local back to iso string
+      const submissionData = {
+        ...formData,
+        admissionDate: new Date(formData.admissionDate).toISOString()
+      };
+
       if (isEditing) {
-        await api.updatePatient(id, formData);
+        await api.updatePatient(id, submissionData);
         navigate(`/patients/${id}`);
       } else {
-        const newPatient = await api.createPatient(formData);
+        const newPatient = await api.createPatient(submissionData);
         navigate(`/patients/${newPatient.id}`);
       }
     } catch (error) {
@@ -83,115 +104,88 @@ export default function PatientForm() {
   if (loading) return <div className="p-6 text-center text-muted">Загрузка...</div>;
 
   return (
-    <div className="animate-fade-in" style={{ maxWidth: '800px', margin: '0 auto' }}>
+    <div className="animate-fade-in" style={{ maxWidth: '900px', margin: '0 auto' }}>
       <div className="flex items-center gap-4 mb-6">
         <button className="btn btn-icon btn-outline" onClick={() => navigate(-1)}>
           <ArrowLeft size={20} />
         </button>
-        <h2 className="text-2xl">{isEditing ? 'Редактирование пациента' : 'Новая запись пациента'}</h2>
+        <h2 className="text-2xl m-0">{isEditing ? 'Редактирование пациента' : 'Новая запись пациента'}</h2>
       </div>
 
-      <div className="card p-6">
-        <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit}>
+        <div className="card p-6 mb-6">
+          <h3 className="text-xl mb-4" style={{ color: 'var(--primary)' }}>Основные данные</h3>
+          
           <div className="grid-2">
             <div className="input-group">
               <label className="input-label">ФИО (Полностью) *</label>
-              <input 
-                type="text" 
-                name="fullName"
-                className="input-field" 
-                required 
-                value={formData.fullName}
-                onChange={handleChange}
-              />
+              <input type="text" name="fullName" className="input-field" required value={formData.fullName} onChange={handleChange} />
             </div>
             
             <div className="input-group">
               <label className="input-label">Дата рождения *</label>
-              <input 
-                type="date" 
-                name="birthDate"
-                className="input-field" 
-                required 
-                value={formData.birthDate}
-                onChange={handleChange}
-              />
+              <input type="date" name="birthDate" className="input-field" required value={formData.birthDate} onChange={handleChange} />
             </div>
           </div>
           
           <div className="grid-2">
             <div className="input-group">
               <label className="input-label">Личный номер (Жетон)</label>
-              <input 
-                type="text" 
-                name="tokenNumber"
-                className="input-field" 
-                value={formData.tokenNumber}
-                onChange={handleChange}
-              />
+              <input type="text" name="tokenNumber" className="input-field" value={formData.tokenNumber} onChange={handleChange} />
             </div>
-
             <div className="input-group">
-              <label className="input-label">Дата поступления *</label>
-              <input 
-                type="date" 
-                name="admissionDate"
-                className="input-field" 
-                required 
-                value={formData.admissionDate}
-                onChange={handleChange}
-              />
+              <label className="input-label">№ Истории Болезни</label>
+              <input type="text" name="caseHistoryNumber" className="input-field" value={formData.caseHistoryNumber} onChange={handleChange} />
             </div>
           </div>
-          
-          {!isEditing && (
-             <div className="input-group">
-               <label className="input-label">Отделение (при поступлении) *</label>
-               <select 
-                 name="department" 
-                 className="input-field" 
-                 value={formData.department}
-                 onChange={handleChange}
-               >
-                 {DEPARTMENTS.map(dep => (
-                   <option key={dep} value={dep}>{dep}</option>
-                 ))}
-               </select>
-             </div>
-          )}
 
           <div className="input-group">
             <label className="input-label">Адрес проживания</label>
-            <input 
-              type="text" 
-              name="address"
-              className="input-field" 
-              value={formData.address}
-              onChange={handleChange}
-            />
+            <input type="text" name="address" className="input-field" value={formData.address} onChange={handleChange} />
+          </div>
+        </div>
+
+        <div className="card p-6 mb-6">
+          <h3 className="text-xl mb-4" style={{ color: 'var(--primary)' }}>Госпитализация и Диагнозы</h3>
+
+          <div className="grid-2">
+            {!isEditing && (
+              <div className="input-group">
+                <label className="input-label">Отделение (при поступлении) *</label>
+                <select name="department" className="input-field" value={formData.department} onChange={handleChange}>
+                  {DEPARTMENTS.map(dep => <option key={dep} value={dep}>{dep}</option>)}
+                </select>
+              </div>
+            )}
+            
+            <div className="input-group">
+              <label className="input-label">Время поступления *</label>
+              <input type="datetime-local" name="admissionDate" className="input-field" required value={formData.admissionDate} onChange={handleChange} />
+            </div>
           </div>
 
+          <div className="input-group mt-4">
+            <label className="input-label">Диагноз при поступлении</label>
+            <textarea name="admissionDiagnosis" className="input-field" rows={2} value={formData.admissionDiagnosis} onChange={handleChange} style={{ resize: 'vertical' }} />
+          </div>
           <div className="input-group">
-            <label className="input-label">Диагноз (Основной)</label>
-            <textarea 
-              name="diagnosis"
-              className="input-field" 
-              rows={3}
-              value={formData.diagnosis}
-              onChange={handleChange}
-              style={{ resize: 'vertical' }}
-            />
+            <label className="input-label">Клинический диагноз</label>
+            <textarea name="clinicalDiagnosis" className="input-field" rows={2} value={formData.clinicalDiagnosis} onChange={handleChange} style={{ resize: 'vertical' }} />
           </div>
+          <div className="input-group">
+            <label className="input-label">Заключительный диагноз (при выписке)</label>
+            <textarea name="finalDiagnosis" className="input-field" rows={2} value={formData.finalDiagnosis} onChange={handleChange} style={{ resize: 'vertical' }} />
+          </div>
+        </div>
 
-          <div className="flex justify-end gap-4 mt-4">
-            <button type="button" className="btn btn-outline" onClick={() => navigate(-1)}>Отмена</button>
-            <button type="submit" className="btn btn-primary">
-              <Save size={18} />
-              Сохранить
-            </button>
-          </div>
-        </form>
-      </div>
+        <div className="flex justify-end gap-4">
+          <button type="button" className="btn btn-outline" onClick={() => navigate(-1)}>Отмена</button>
+          <button type="submit" className="btn btn-primary">
+            <Save size={18} />
+            Сохранить данные
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

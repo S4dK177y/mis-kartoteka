@@ -13,10 +13,13 @@ datasource db {
 model Patient {
   id                  String     @id @default(uuid())
   tokenNumber         String?    // Личный номер (жетон)
+  caseHistoryNumber    String?    // Номер карты (истории болезни)
   fullName            String
   birthDate           DateTime
   address             String?
-  diagnosis           String?
+  admissionDiagnosis  String?    // Диагноз при поступлении
+  clinicalDiagnosis   String?    // Клинический диагноз
+  finalDiagnosis      String?    // Заключительный диагноз
   department          String     // Текущее отделение
   admissionDate       DateTime   @default(now())
   dischargeDate       DateTime?  // Дата выписки

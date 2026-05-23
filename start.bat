@@ -29,7 +29,13 @@ call npx prisma db push
 
 echo.
 echo [3/3] Starting Server...
-echo Server will be available at http://localhost:8080
+for /f "tokens=14" %%a in ('ipconfig ^| findstr IPv4') do set LOCAL_IP=%%a
+echo Server will be available locally at http://localhost:8080
+if defined LOCAL_IP (
+    echo Server is available on the network at http://%LOCAL_IP%:8080
+) else (
+    echo Could not detect local IP automatically.
+)
 echo Opening browser...
 start http://localhost:8080
 echo Press Ctrl+C in this window to stop the server.

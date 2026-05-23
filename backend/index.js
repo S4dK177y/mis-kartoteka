@@ -77,15 +77,22 @@ app.get('/api/patients/:id', async (req, res) => {
 // Create a new patient
 app.post('/api/patients', async (req, res) => {
   try {
-    const { tokenNumber, fullName, birthDate, address, diagnosis, department, admissionDate } = req.body;
+    const { 
+      tokenNumber, caseHistoryNumber, fullName, birthDate, address, 
+      admissionDiagnosis, clinicalDiagnosis, finalDiagnosis, 
+      department, admissionDate 
+    } = req.body;
     
     const newPatient = await prisma.patient.create({
       data: {
         tokenNumber,
+        caseHistoryNumber,
         fullName,
         birthDate: new Date(birthDate),
         address,
-        diagnosis,
+        admissionDiagnosis,
+        clinicalDiagnosis,
+        finalDiagnosis,
         department,
         admissionDate: admissionDate ? new Date(admissionDate) : new Date(),
         status: 'На лечении',
@@ -106,16 +113,23 @@ app.post('/api/patients', async (req, res) => {
 // Update a patient
 app.put('/api/patients/:id', async (req, res) => {
   try {
-    const { tokenNumber, fullName, birthDate, address, diagnosis, department, admissionDate, dischargeDate, dischargeDestination, status } = req.body;
+    const { 
+      tokenNumber, caseHistoryNumber, fullName, birthDate, address, 
+      admissionDiagnosis, clinicalDiagnosis, finalDiagnosis, 
+      department, admissionDate, dischargeDate, dischargeDestination, status 
+    } = req.body;
     
     const updatedPatient = await prisma.patient.update({
       where: { id: req.params.id },
       data: {
         tokenNumber,
+        caseHistoryNumber,
         fullName,
         birthDate: birthDate ? new Date(birthDate) : undefined,
         address,
-        diagnosis,
+        admissionDiagnosis,
+        clinicalDiagnosis,
+        finalDiagnosis,
         department,
         admissionDate: admissionDate ? new Date(admissionDate) : undefined,
         dischargeDate: dischargeDate ? new Date(dischargeDate) : null,
@@ -132,7 +146,7 @@ app.put('/api/patients/:id', async (req, res) => {
 // Transfer a patient
 app.post('/api/patients/:id/transfer', async (req, res) => {
   try {
-    const { toDepartment } = req.body;
+    const { toDepartment, transferDate } = req.body;
     if (!toDepartment) return res.status(400).json({ error: 'toDepartment is required' });
     
     const patient = await prisma.patient.findUnique({ where: { id: req.params.id } });
@@ -146,7 +160,7 @@ app.post('/api/patients/:id/transfer', async (req, res) => {
           create: {
             fromDepartment: patient.department,
             toDepartment: toDepartment,
-            transferDate: new Date()
+            transferDate: transferDate ? new Date(transferDate) : new Date()
           }
         }
       }
@@ -236,28 +250,34 @@ app.get('/api/export/patients', async (req, res) => {
 
     worksheet.columns = [
       { header: 'Жетон', key: 'tokenNumber', width: 15 },
+      { header: '№ ИБ', key: 'caseHistoryNumber', width: 15 },
       { header: 'ФИО', key: 'fullName', width: 30 },
       { header: 'Дата рождения', key: 'birthDate', width: 15 },
       { header: 'Адрес', key: 'address', width: 30 },
-      { header: 'Диагноз', key: 'diagnosis', width: 30 },
+      { header: 'Д/з при поступлении', key: 'admissionDiagnosis', width: 30 },
+      { header: 'Клинический Д/з', key: 'clinicalDiagnosis', width: 30 },
+      { header: 'Заключительный Д/з', key: 'finalDiagnosis', width: 30 },
       { header: 'Отделение', key: 'department', width: 25 },
-      { header: 'Дата поступления', key: 'admissionDate', width: 15 },
+      { header: 'Дата поступления', key: 'admissionDate', width: 20 },
       { header: 'Статус', key: 'status', width: 15 },
-      { header: 'Дата выписки', key: 'dischargeDate', width: 15 },
+      { header: 'Дата выписки', key: 'dischargeDate', width: 20 },
       { header: 'Куда выписан/переведен', key: 'dischargeDestination', width: 30 }
     ];
 
     patients.forEach(p => {
       worksheet.addRow({
         tokenNumber: p.tokenNumber || '',
+        caseHistoryNumber: p.caseHistoryNumber || '',
         fullName: p.fullName,
         birthDate: p.birthDate.toISOString().split('T')[0],
         address: p.address || '',
-        diagnosis: p.diagnosis || '',
+        admissionDiagnosis: p.admissionDiagnosis || '',
+        clinicalDiagnosis: p.clinicalDiagnosis || '',
+        finalDiagnosis: p.finalDiagnosis || '',
         department: p.department,
-        admissionDate: p.admissionDate.toISOString().split('T')[0],
+        admissionDate: p.admissionDate.toISOString().replace('T', ' ').substring(0, 16),
         status: p.status,
-        dischargeDate: p.dischargeDate ? p.dischargeDate.toISOString().split('T')[0] : '',
+        dischargeDate: p.dischargeDate ? p.dischargeDate.toISOString().replace('T', ' ').substring(0, 16) : '',
         dischargeDestination: p.dischargeDestination || ''
       });
     });
