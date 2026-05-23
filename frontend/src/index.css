@@ -60,18 +60,16 @@ body {
   from { opacity: 0; transform: translateY(15px); }
   to { opacity: 1; transform: translateY(0); }
 }
-@keyframes float {
-  0% { transform: translateY(0px) translateX(0px); }
-  33% { transform: translateY(-20px) translateX(10px); }
-  66% { transform: translateY(10px) translateX(-15px); }
-  100% { transform: translateY(0px) translateX(0px); }
+@keyframes smoothGradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
 .auth-background {
-  background-color: #f8fafc;
-  background-image: 
-    radial-gradient(circle at 15% 50%, rgba(14, 165, 233, 0.15), transparent 25%),
-    radial-gradient(circle at 85% 30%, rgba(16, 185, 129, 0.15), transparent 25%);
+  background: linear-gradient(-45deg, #7dd3fc, #818cf8, #a78bfa, #93c5fd);
+  background-size: 400% 400%;
+  animation: smoothGradient 30s ease infinite;
   min-height: 100vh;
   width: 100vw;
   display: flex;
@@ -82,31 +80,6 @@ body {
   left: 0;
   z-index: 1000;
   overflow: hidden;
-}
-
-.auth-background::before, .auth-background::after {
-  content: '';
-  position: absolute;
-  width: 60vw;
-  height: 60vw;
-  border-radius: 50%;
-  z-index: -1;
-  filter: blur(80px);
-  animation: float 15s ease-in-out infinite;
-  opacity: 0.5;
-}
-
-.auth-background::before {
-  background: rgba(14, 165, 233, 0.3);
-  top: -20%;
-  left: -10%;
-}
-
-.auth-background::after {
-  background: rgba(16, 185, 129, 0.2);
-  bottom: -20%;
-  right: -10%;
-  animation-delay: -5s;
 }
 
 .animate-fade-in {

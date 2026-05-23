@@ -39,7 +39,7 @@ const Setup = () => {
     <div className="auth-background">
       <div className="card animate-fade-in" style={{ width: '100%', maxWidth: '450px', padding: '3rem 2.5rem', background: 'rgba(255, 255, 255, 0.95)', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', border: '1px solid rgba(255,255,255,0.4)', borderRadius: '24px' }}>
         <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center mb-4" style={{ width: '64px', height: '64px', background: 'var(--primary)', color: 'white', borderRadius: '16px', boxShadow: '0 10px 25px -5px rgba(14, 165, 233, 0.5)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem auto', width: '64px', height: '64px', background: 'var(--primary)', color: 'white', borderRadius: '16px', boxShadow: '0 10px 25px -5px rgba(14, 165, 233, 0.5)' }}>
             <Activity size={32} />
           </div>
           <h1 className="text-2xl font-bold m-0 text-primary">Первый запуск</h1>

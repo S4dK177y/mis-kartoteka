@@ -7,12 +7,39 @@ import { ru } from 'date-fns/locale';
 import { api } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { Document, Page, pdfjs } from 'react-pdf';
+import { useInView } from 'react-intersection-observer';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 import { DEPARTMENTS } from './PatientForm';
 import ICD10Autocomplete from '../components/ICD10Autocomplete';
+
+const LazyPdfPage = ({ pageNumber, width }) => {
+  const { ref, inView } = useInView({
+    rootMargin: '100px 0px', // Tight margin to unmount quickly
+    triggerOnce: false,
+  });
+
+  return (
+    <div ref={ref} style={{ minHeight: '800px', marginBottom: '1rem', width: '100%', display: 'flex', justifyContent: 'center' }}>
+      {inView ? (
+        <Page 
+          pageNumber={pageNumber} 
+          renderTextLayer={false} 
+          renderAnnotationLayer={false} 
+          width={width}
+          className="shadow-lg"
+          renderMode="canvas"
+        />
+      ) : (
+        <div style={{ height: '800px', width: width, background: '#444', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888' }}>
+          Загрузка страницы {pageNumber}...
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default function PatientProfile() {
   const { id } = useParams();
@@ -477,13 +504,6 @@ export default function PatientProfile() {
               <span style={{ fontWeight: 600 }}>{viewingFile.originalName}</span>
             </div>
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-              {viewingFile.mimeType === 'application/pdf' && numPages && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginRight: '1rem', background: 'rgba(255,255,255,0.1)', padding: '0.2rem 1rem', borderRadius: '16px' }}>
-                  <button className="btn btn-icon text-white" disabled={pageNumber <= 1} onClick={() => setPageNumber(p => p - 1)}>&lt;</button>
-                  <span style={{ fontSize: '0.9rem' }}>Стр. {pageNumber} из {numPages}</span>
-                  <button className="btn btn-icon text-white" disabled={pageNumber >= numPages} onClick={() => setPageNumber(p => p + 1)}>&gt;</button>
-                </div>
-              )}
               <a href={api.getDocumentUrl(viewingFile.id)} className="btn btn-outline" style={{ color: 'white', borderColor: 'rgba(255,255,255,0.3)' }} title="Скачать">
                 <Download size={16} /> Скачать
               </a>
@@ -492,23 +512,23 @@ export default function PatientProfile() {
               </button>
             </div>
           </div>
-          <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '1rem', overflow: 'auto' }}>
+          <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'flex-start', padding: '1rem', overflow: 'auto' }}>
             {viewingFile.mimeType.startsWith('image/') ? (
-              <img src={`${api.getDocumentUrl(viewingFile.id)}?inline=true`} alt={viewingFile.originalName} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', boxShadow: '0 10px 25px rgba(0,0,0,0.5)' }} />
+              <img src={`${api.getDocumentUrl(viewingFile.id)}?inline=true`} alt={viewingFile.originalName} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', boxShadow: '0 10px 25px rgba(0,0,0,0.5)', alignSelf: 'center' }} />
             ) : (
-              <div style={{ background: '#333', padding: '1rem', borderRadius: '8px', overflow: 'auto', maxHeight: '100%', display: 'flex', justifyContent: 'center' }}>
+              <div style={{ background: '#333', padding: '1rem', borderRadius: '8px', minWidth: '80%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
                 <Document
                   file={{ url: `${api.getDocumentUrl(viewingFile.id)}?inline=true`, withCredentials: true }}
                   onLoadSuccess={({ numPages }) => setNumPages(numPages)}
                   loading={<div className="text-white p-8">Загрузка PDF...</div>}
                 >
-                  <Page 
-                    pageNumber={pageNumber} 
-                    renderTextLayer={true} 
-                    renderAnnotationLayer={true} 
-                    width={Math.min(window.innerWidth * 0.9, 900)}
-                    className="shadow-lg"
-                  />
+                  {Array.from(new Array(numPages || 0), (el, index) => (
+                    <LazyPdfPage 
+                      key={`page_${index + 1}`}
+                      pageNumber={index + 1}
+                      width={Math.min(window.innerWidth * 0.9, 900)}
+                    />
+                  ))}
                 </Document>
               </div>
             )}
