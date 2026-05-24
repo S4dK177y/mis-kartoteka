@@ -7,6 +7,7 @@ import 'react-datepicker/dist/react-datepicker.css';
 import { ru } from 'date-fns/locale';
 import ICD10Autocomplete from '../components/ICD10Autocomplete';
 import { MILITARY_RANKS_GROUPS } from '../ranks';
+import { formatPhone } from '../utils';
 
 export const DEPARTMENTS = [
   'Неврологическое отделение (НО)',
@@ -38,7 +39,10 @@ export default function PatientForm() {
     fullName: readmissionData?.fullName || '',
     address: readmissionData?.address || '',
     phoneNumber: readmissionData?.phoneNumber || '',
-    relativeContact: readmissionData?.relativeContact || '',
+    relativeRelation: readmissionData?.relativeRelation || '',
+    relativeFullName: readmissionData?.relativeFullName || '',
+    relativePhone: readmissionData?.relativePhone || '',
+    relativeAddress: readmissionData?.relativeAddress || '',
     admissionDiagnosis: '',
     clinicalDiagnosis: '',
     finalDiagnosis: '',
@@ -73,7 +77,10 @@ export default function PatientForm() {
         fullName: data.fullName,
         address: data.address || '',
         phoneNumber: data.phoneNumber || '',
-        relativeContact: data.relativeContact || '',
+        relativeRelation: data.relativeRelation || '',
+        relativeFullName: data.relativeFullName || '',
+        relativePhone: data.relativePhone || '',
+        relativeAddress: data.relativeAddress || '',
         admissionDiagnosis: data.admissionDiagnosis || '',
         clinicalDiagnosis: data.clinicalDiagnosis || '',
         finalDiagnosis: data.finalDiagnosis || '',
@@ -125,6 +132,11 @@ export default function PatientForm() {
       return;
     }
 
+    if (name === 'phoneNumber' || name === 'relativePhone') {
+      setFormData(prev => ({ ...prev, [name]: formatPhone(value) }));
+      return;
+    }
+
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
@@ -159,8 +171,8 @@ export default function PatientForm() {
   if (loading) return <div className="p-6 text-center text-muted">Загрузка...</div>;
 
   return (
-    <div className="animate-fade-in" style={{ maxWidth: '900px', margin: '0 auto' }}>
-      <div className="flex items-center gap-4 mb-4">
+    <div className="animate-fade-in" style={{ maxWidth: '1200px', margin: '0 auto' }}>
+      <div className="flex items-center gap-4 mb-4 justify-between">
         <button className="btn btn-icon btn-outline" onClick={() => navigate(-1)}>
           <ArrowLeft size={16} />
         </button>
@@ -251,14 +263,32 @@ export default function PatientForm() {
             <input type="text" name="address" className="input-field" value={formData.address} onChange={handleChange} />
           </div>
           
-          <div className="grid-2 mt-4">
-            <div className="input-group">
-              <label className="input-label">Номер телефона</label>
-              <input type="text" name="phoneNumber" className="input-field" value={formData.phoneNumber} onChange={handleChange} placeholder="+7 (___) ___-__-__" />
+          <div className="input-group mt-4 mb-2">
+            <label className="input-label">Номер телефона пациента</label>
+            <input type="text" name="phoneNumber" className="input-field" value={formData.phoneNumber} onChange={handleChange} placeholder="+7-___-___-__-__" />
+          </div>
+
+          <div className="card p-4 mt-4" style={{ background: 'var(--bg-main)' }}>
+            <h4 className="text-md font-bold mb-3 text-primary">Контактные данные близкого человека</h4>
+            <div className="grid-2">
+              <div className="input-group">
+                <label className="input-label">Кем приходится (статус)</label>
+                <input type="text" name="relativeRelation" className="input-field" value={formData.relativeRelation} onChange={handleChange} placeholder="Жена, Брат, Сын и т.д." />
+              </div>
+              <div className="input-group">
+                <label className="input-label">ФИО близкого</label>
+                <input type="text" name="relativeFullName" className="input-field" value={formData.relativeFullName} onChange={handleChange} placeholder="Иванова Мария Ивановна" />
+              </div>
             </div>
-            <div className="input-group">
-              <label className="input-label">Контактные данные близких</label>
-              <input type="text" name="relativeContact" className="input-field" value={formData.relativeContact} onChange={handleChange} placeholder="Жена: +7..." />
+            <div className="grid-2 mt-2">
+              <div className="input-group">
+                <label className="input-label">Номер телефона</label>
+                <input type="text" name="relativePhone" className="input-field" value={formData.relativePhone} onChange={handleChange} placeholder="+7-___-___-__-__" />
+              </div>
+              <div className="input-group">
+                <label className="input-label">Адрес проживания</label>
+                <input type="text" name="relativeAddress" className="input-field" value={formData.relativeAddress} onChange={handleChange} placeholder="Город, Улица, Дом" />
+              </div>
             </div>
           </div>
         </div>

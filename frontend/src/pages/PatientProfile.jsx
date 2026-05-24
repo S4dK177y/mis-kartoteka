@@ -350,10 +350,32 @@ export default function PatientProfile() {
                 <span className="text-muted">Телефон:</span>
                 <span style={{ fontWeight: 500 }}>{patient.phoneNumber || '—'}</span>
               </div>
-              <div className="flex justify-between border-b pb-1">
-                <span className="text-muted">Близкие:</span>
-                <span style={{ fontWeight: 500, textAlign: 'right' }}>{patient.relativeContact || '—'}</span>
-              </div>
+              {patient.relativeRelation || patient.relativeFullName || patient.relativePhone ? (
+                <div className="flex-col gap-1 border-b pb-1">
+                  <span className="text-muted text-xs uppercase font-bold">Близкий человек:</span>
+                  <div className="flex justify-between">
+                    <span className="text-muted text-xs">Статус:</span>
+                    <span style={{ fontWeight: 500, fontSize: '0.85rem' }}>{patient.relativeRelation || '—'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted text-xs">ФИО:</span>
+                    <span style={{ fontWeight: 500, fontSize: '0.85rem', textAlign: 'right' }}>{patient.relativeFullName || '—'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted text-xs">Телефон:</span>
+                    <span style={{ fontWeight: 500, fontSize: '0.85rem' }}>{patient.relativePhone || '—'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted text-xs">Адрес:</span>
+                    <span style={{ fontWeight: 500, fontSize: '0.85rem', textAlign: 'right' }}>{patient.relativeAddress || '—'}</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex justify-between border-b pb-1">
+                  <span className="text-muted">Близкие:</span>
+                  <span style={{ fontWeight: 500, textAlign: 'right' }}>—</span>
+                </div>
+              )}
               <div className="flex justify-between border-b pb-1">
                 <span className="text-muted">Отделение:</span>
                 <span style={{ fontWeight: 600, color: 'var(--primary-hover)' }}>{patient.department}</span>

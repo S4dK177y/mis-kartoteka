@@ -46,7 +46,10 @@ model Patient {
   birthDate            DateTime
   address              String?
   phoneNumber          String?
-  relativeContact      String?
+  relativeRelation     String? // Статус (жена, брат, друг и т.д.)
+  relativeFullName     String? // ФИО близкого
+  relativePhone        String? // Телефон близкого
+  relativeAddress      String? // Адрес близкого
   admissionDiagnosis   String? // Диагноз при поступлении
   clinicalDiagnosis    String? // Клинический диагноз
   finalDiagnosis       String? // Заключительный диагноз
@@ -99,7 +102,10 @@ model Consultation {
   birthDate            DateTime?
   address              String?
   phoneNumber          String?
-  relativeContact      String?
+  relativeRelation     String?
+  relativeFullName     String?
+  relativePhone        String?
+  relativeAddress      String?
   diagnosis            String?
   consultationDate     DateTime  @default(now())
   nextConsultationDate DateTime?
