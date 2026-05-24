@@ -792,7 +792,14 @@ app.get('/api/persons', authenticateToken, async (req, res) => {
       }
     }
 
-    const personsList = Array.from(personsMap.values()).sort((a, b) => {
+    const personsList = Array.from(personsMap.values()).map(p => {
+      const isOtherRank = ['Пенсионер МО РФ', 'Член семьи военнослужащего', 'Другие'].includes(p.rank);
+      if (isOtherRank) {
+        p.militaryStatus = null;
+        p.isSvoParticipant = false;
+      }
+      return p;
+    }).sort((a, b) => {
       if (!a.latestEncounterDate) return 1;
       if (!b.latestEncounterDate) return -1;
       return b.latestEncounterDate - a.latestEncounterDate;
@@ -861,6 +868,14 @@ app.get('/api/persons/:personId', authenticateToken, async (req, res) => {
         personInfo.relativeFullName = rec.relativeFullName || personInfo.relativeFullName;
         personInfo.relativePhone = rec.relativePhone || personInfo.relativePhone;
         personInfo.relativeAddress = rec.relativeAddress || personInfo.relativeAddress;
+      }
+    }
+    
+    if (personInfo) {
+      const isOtherRank = ['Пенсионер МО РФ', 'Член семьи военнослужащего', 'Другие'].includes(personInfo.rank);
+      if (isOtherRank) {
+        personInfo.militaryStatus = null;
+        personInfo.isSvoParticipant = false;
       }
     }
     
