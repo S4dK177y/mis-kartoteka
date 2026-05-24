@@ -90,6 +90,28 @@ export const api = {
     return res.json();
   },
 
+  getLogStats: async () => {
+    const res = await fetchWithAuth(`${API_URL}/logs/stats`);
+    if (!res.ok) throw new Error('Failed to fetch log stats');
+    return res.json();
+  },
+
+  getSettings: async () => {
+    const res = await fetchWithAuth(`${API_URL}/settings`);
+    if (!res.ok) throw new Error('Failed to fetch settings');
+    return res.json();
+  },
+
+  updateSettings: async (settings) => {
+    const res = await fetchWithAuth(`${API_URL}/settings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(settings)
+    });
+    if (!res.ok) throw new Error('Failed to update settings');
+    return res.json();
+  },
+
   // --- PATIENTS ---
   getPatients: async () => {
     const res = await fetchWithAuth(`${API_URL}/patients`);
@@ -156,6 +178,50 @@ export const api = {
     if (!res.ok) throw new Error('Failed to delete document');
   },
   
+  // --- CONSULTATIONS ---
+  getConsultations: async () => {
+    const res = await fetchWithAuth(`${API_URL}/consultations`);
+    if (!res.ok) throw new Error('Failed to fetch consultations');
+    return res.json();
+  },
+
+  createConsultation: async (data) => {
+    const res = await fetchWithAuth(`${API_URL}/consultations`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error('Failed to create consultation');
+    return res.json();
+  },
+
+  updateConsultation: async (id, data) => {
+    const res = await fetchWithAuth(`${API_URL}/consultations/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error('Failed to update consultation');
+    return res.json();
+  },
+
+  deleteConsultation: async (id) => {
+    const res = await fetchWithAuth(`${API_URL}/consultations/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Failed to delete consultation');
+  },
+
+  // --- PERSONS ---
+  getPersons: async () => {
+    const res = await fetchWithAuth(`${API_URL}/persons`);
+    if (!res.ok) throw new Error('Failed to fetch persons');
+    return res.json();
+  },
+  getPersonProfile: async (id) => {
+    const res = await fetchWithAuth(`${API_URL}/persons/${id}`);
+    if (!res.ok) throw new Error('Failed to fetch person profile');
+    return res.json();
+  },
+
   exportPatientsUrl: `${API_URL}/export/patients`,
   getDocumentUrl: (id) => `${API_URL}/documents/${id}`
 };

@@ -347,6 +347,14 @@ export default function PatientProfile() {
                 <span style={{ fontWeight: 500 }}>{patient.militaryUnit || '—'}</span>
               </div>
               <div className="flex justify-between border-b pb-1">
+                <span className="text-muted">Телефон:</span>
+                <span style={{ fontWeight: 500 }}>{patient.phoneNumber || '—'}</span>
+              </div>
+              <div className="flex justify-between border-b pb-1">
+                <span className="text-muted">Близкие:</span>
+                <span style={{ fontWeight: 500, textAlign: 'right' }}>{patient.relativeContact || '—'}</span>
+              </div>
+              <div className="flex justify-between border-b pb-1">
                 <span className="text-muted">Отделение:</span>
                 <span style={{ fontWeight: 600, color: 'var(--primary-hover)' }}>{patient.department}</span>
               </div>
@@ -510,7 +518,7 @@ export default function PatientProfile() {
         </div>
 
         {/* History of Hospitalizations (Full Width) */}
-        <div className="card p-4" style={{ gridColumn: 'span 3' }}>
+        <div className="card p-4" style={{ gridColumn: 'span 3', marginBottom: '1rem' }}>
           <div className="flex items-center gap-2 mb-4">
             <Activity size={20} className="text-primary" />
             <h3 className="text-lg m-0 text-primary">Предыдущие госпитализации</h3>
@@ -555,16 +563,48 @@ export default function PatientProfile() {
                           {hist.status}
                         </span>
                       </td>
-                      <td style={{ padding: '10px', textAlign: 'right' }}>
-                        <button 
-                          className="btn btn-sm btn-outline" 
-                          onClick={() => {
-                            window.scrollTo(0,0);
-                            navigate(`/patients/${hist.id}`);
-                          }}
-                        >
-                          Перейти
-                        </button>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* History of Consultations (Full Width) */}
+        <div className="card p-4" style={{ gridColumn: 'span 3' }}>
+          <div className="flex items-center gap-2 mb-4">
+            <FileText size={20} className="text-secondary" />
+            <h3 className="text-lg m-0" style={{ color: 'var(--secondary)' }}>История амбулаторных консультаций</h3>
+          </div>
+          
+          {(!patient.consultations || patient.consultations.length === 0) ? (
+            <div className="text-center text-muted p-4" style={{ background: 'var(--bg-main)', borderRadius: 'var(--radius-md)' }}>
+              <p className="m-0">История консультаций отсутствует</p>
+            </div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                <thead>
+                  <tr style={{ borderBottom: '2px solid var(--border)', textAlign: 'left', color: 'var(--text-muted)' }}>
+                    <th style={{ padding: '10px' }}>Дата приема</th>
+                    <th style={{ padding: '10px' }}>Диагноз</th>
+                    <th style={{ padding: '10px' }}>Следующий визит</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {patient.consultations.map(consult => (
+                    <tr key={consult.id} style={{ borderBottom: '1px solid var(--border-light)', cursor: 'pointer' }} onClick={() => { window.scrollTo(0, 0); navigate(`/consultations/${consult.id}/edit`); }}>
+                      <td style={{ padding: '10px' }}>
+                        {new Date(consult.consultationDate).toLocaleDateString('ru-RU')}
+                      </td>
+                      <td style={{ padding: '10px' }}>
+                        <div style={{ maxWidth: '400px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={consult.diagnosis || 'Нет диагноза'}>
+                          {consult.diagnosis || <span className="text-muted">Нет диагноза</span>}
+                        </div>
+                      </td>
+                      <td style={{ padding: '10px' }}>
+                        {consult.nextConsultationDate ? new Date(consult.nextConsultationDate).toLocaleDateString('ru-RU') : '—'}
                       </td>
                     </tr>
                   ))}

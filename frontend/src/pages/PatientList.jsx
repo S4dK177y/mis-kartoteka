@@ -112,12 +112,6 @@ export default function PatientList() {
           </div>
         </div>
         
-        <div className="flex gap-2">
-          <a href={api.exportPatientsUrl} className="btn btn-outline" download>
-            <Download size={16} />
-            Экспорт
-          </a>
-        </div>
       </div>
 
       <div className="card table-wrapper" style={{ flex: 1 }}>

@@ -45,6 +45,8 @@ model Patient {
   fullName             String
   birthDate            DateTime
   address              String?
+  phoneNumber          String?
+  relativeContact      String?
   admissionDiagnosis   String? // Диагноз при поступлении
   clinicalDiagnosis    String? // Клинический диагноз
   finalDiagnosis       String? // Заключительный диагноз
@@ -83,4 +85,31 @@ model TransferHistory {
   toDepartment   String // В какое отделение
   transferDate   DateTime @default(now())
   patient        Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+}
+
+model Consultation {
+  id                   String    @id @default(uuid())
+  personId             String?
+  tokenNumber          String?
+  rank                 String?
+  militaryUnit         String?
+  militaryStatus       String?
+  isSvoParticipant     Boolean   @default(false)
+  fullName             String
+  birthDate            DateTime?
+  address              String?
+  phoneNumber          String?
+  relativeContact      String?
+  diagnosis            String?
+  consultationDate     DateTime  @default(now())
+  nextConsultationDate DateTime?
+  notes                String?
+  doctorId             String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+}
+
+model Setting {
+  key   String @id
+  value String
 }

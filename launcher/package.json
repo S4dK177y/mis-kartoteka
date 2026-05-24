@@ -9,7 +9,7 @@
   },
   "build": {
     "appId": "com.mis.servercontrol",
-    "productName": "MIS Server Control",
+    "productName": "МИС Картотека - Управление сервером",
     "directories": {
       "output": "../dist"
     },

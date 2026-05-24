@@ -1,54 +1,38 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { api } from '../api';
-import { Save, ArrowLeft } from 'lucide-react';
+import { Save, ArrowLeft, Trash2 } from 'lucide-react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { ru } from 'date-fns/locale';
 import ICD10Autocomplete from '../components/ICD10Autocomplete';
 import { MILITARY_RANKS_GROUPS } from '../ranks';
 
-export const DEPARTMENTS = [
-  'Неврологическое отделение (НО)',
-  'Хирургическое отделение (ХО)',
-  'Оториноларингологическое отделение (ЛОР)',
-  'Терапевтическое №1 (ТО1)',
-  'Терапевтическое №2 (ТО2)',
-  'Инфекционное №1 (ИО1)',
-  'Инфекционное №2 (ИО2)',
-  'Отделение анестезиологии и реанимации (ОАиР)',
-  'Госпитальное отделение (ГО)'
-];
-
-export default function PatientForm() {
+export default function ConsultationForm() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   const isEditing = Boolean(id);
-  const readmissionData = location.state?.readmissionData || null;
+  const prefillData = location.state?.prefillData || null;
   
   const [formData, setFormData] = useState({
-    personId: readmissionData?.personId || '',
-    tokenNumber: readmissionData?.tokenNumber || '',
-    caseHistoryNumber: '',
-    rank: readmissionData?.rank || '',
-    militaryUnit: readmissionData?.militaryUnit || '',
-    militaryStatus: readmissionData?.militaryStatus || 'Призыв',
-    isSvoParticipant: readmissionData?.isSvoParticipant || false,
-    fullName: readmissionData?.fullName || '',
-    address: readmissionData?.address || '',
-    phoneNumber: readmissionData?.phoneNumber || '',
-    relativeContact: readmissionData?.relativeContact || '',
-    admissionDiagnosis: '',
-    clinicalDiagnosis: '',
-    finalDiagnosis: '',
-    complications: '',
-    department: DEPARTMENTS[0],
-    status: 'На лечении'
+    personId: prefillData?.personId || '',
+    tokenNumber: prefillData?.tokenNumber || '',
+    rank: prefillData?.rank || '',
+    militaryUnit: prefillData?.militaryUnit || '',
+    militaryStatus: prefillData?.militaryStatus || 'Призыв',
+    isSvoParticipant: prefillData?.isSvoParticipant || false,
+    fullName: prefillData?.fullName || '',
+    address: prefillData?.address || '',
+    phoneNumber: prefillData?.phoneNumber || '',
+    relativeContact: prefillData?.relativeContact || '',
+    diagnosis: '',
+    notes: ''
   });
   
-  const [admissionDate, setAdmissionDate] = useState(new Date());
-  const [birthDate, setBirthDate] = useState(readmissionData?.birthDate ? new Date(readmissionData.birthDate) : null);
+  const [consultationDate, setConsultationDate] = useState(new Date());
+  const [nextConsultationDate, setNextConsultationDate] = useState(null);
+  const [birthDate, setBirthDate] = useState(prefillData?.birthDate ? new Date(prefillData.birthDate) : null);
 
   const [loading, setLoading] = useState(isEditing);
 
@@ -56,16 +40,20 @@ export default function PatientForm() {
 
   useEffect(() => {
     if (isEditing) {
-      fetchPatient();
+      fetchConsultation();
     }
   }, [id]);
 
-  const fetchPatient = async () => {
+  const fetchConsultation = async () => {
     try {
-      const data = await api.getPatient(id);
+      // Find the specific consultation by id
+      const dataList = await api.getConsultations();
+      const data = dataList.find(c => c.id === id);
+      if (!data) throw new Error("Консультация не найдена");
+
       setFormData({
+        personId: data.personId || '',
         tokenNumber: data.tokenNumber || '',
-        caseHistoryNumber: data.caseHistoryNumber || '',
         rank: data.rank || '',
         militaryUnit: data.militaryUnit || '',
         militaryStatus: data.militaryStatus || 'Призыв',
@@ -74,20 +62,21 @@ export default function PatientForm() {
         address: data.address || '',
         phoneNumber: data.phoneNumber || '',
         relativeContact: data.relativeContact || '',
-        admissionDiagnosis: data.admissionDiagnosis || '',
-        clinicalDiagnosis: data.clinicalDiagnosis || '',
-        finalDiagnosis: data.finalDiagnosis || '',
-        complications: data.complications || '',
-        department: data.department || DEPARTMENTS[0],
-        status: data.status
+        diagnosis: data.diagnosis || '',
+        notes: data.notes || ''
       });
-      setAdmissionDate(new Date(data.admissionDate));
+      setConsultationDate(new Date(data.consultationDate));
       
       const bd = new Date(data.birthDate);
       setBirthDate(isNaN(bd.getTime()) ? null : bd);
+
+      if (data.nextConsultationDate) {
+        setNextConsultationDate(new Date(data.nextConsultationDate));
+      }
     } catch (error) {
       console.error(error);
-      alert('Ошибка при загрузке данных пациента');
+      alert('Ошибка при загрузке данных консультации');
+      navigate(-1);
     } finally {
       setLoading(false);
     }
@@ -98,13 +87,11 @@ export default function PatientForm() {
     const name = target.name;
     const value = target.type === 'checkbox' ? target.checked : target.value;
     
-    // Token validation enforcing upper case
     if (name === 'tokenNumber') {
       setFormData(prev => ({ ...prev, [name]: value.toUpperCase() }));
       return;
     }
     
-    // Reset SVO when switching to Призыв
     if (name === 'militaryStatus') {
       if (value === 'Призыв') {
         setFormData(prev => ({ ...prev, [name]: value, isSvoParticipant: false }));
@@ -139,20 +126,32 @@ export default function PatientForm() {
     try {
       const submissionData = {
         ...formData,
-        admissionDate: admissionDate.toISOString(),
-        birthDate: birthDate.toISOString()
+        consultationDate: consultationDate.toISOString(),
+        birthDate: birthDate.toISOString(),
+        nextConsultationDate: nextConsultationDate ? nextConsultationDate.toISOString() : null
       };
 
       if (isEditing) {
-        await api.updatePatient(id, submissionData);
-        navigate(`/patients/${id}`);
+        await api.updateConsultation(id, submissionData);
       } else {
-        const newPatient = await api.createPatient(submissionData);
-        navigate(`/patients/${newPatient.id}`);
+        await api.createConsultation(submissionData);
       }
+      navigate('/consultations');
     } catch (error) {
       console.error(error);
       alert('Ошибка при сохранении');
+    }
+  };
+
+  const handleDelete = async () => {
+    if (window.confirm('Вы уверены, что хотите удалить эту запись о консультации?')) {
+      try {
+        await api.deleteConsultation(id);
+        navigate('/consultations');
+      } catch (error) {
+        console.error(error);
+        alert('Ошибка при удалении');
+      }
     }
   };
 
@@ -160,11 +159,18 @@ export default function PatientForm() {
 
   return (
     <div className="animate-fade-in" style={{ maxWidth: '900px', margin: '0 auto' }}>
-      <div className="flex items-center gap-4 mb-4">
-        <button className="btn btn-icon btn-outline" onClick={() => navigate(-1)}>
-          <ArrowLeft size={16} />
-        </button>
-        <h2 className="text-xl m-0">{isEditing ? 'Редактирование пациента' : 'Новая запись пациента'}</h2>
+      <div className="flex items-center gap-4 mb-4 justify-between">
+        <div className="flex items-center gap-4">
+          <button className="btn btn-icon btn-outline" onClick={() => navigate(-1)}>
+            <ArrowLeft size={16} />
+          </button>
+          <h2 className="text-xl m-0">{isEditing ? 'Редактирование консультации' : 'Новая консультация'}</h2>
+        </div>
+        {isEditing && (
+          <button type="button" className="btn btn-danger" onClick={handleDelete}>
+            <Trash2 size={16} /> Удалить
+          </button>
+        )}
       </div>
 
       <form onSubmit={handleSubmit}>
@@ -193,7 +199,7 @@ export default function PatientForm() {
           
           <div className="grid-2">
             <div className="input-group">
-              <label className="input-label">Воинское звание</label>
+              <label className="input-label">Воинское звание / Категория</label>
               <select name="rank" className="input-field" value={formData.rank} onChange={handleChange}>
                 <option value="">Не указано</option>
                 {MILITARY_RANKS_GROUPS.map((group, idx) => (
@@ -241,17 +247,12 @@ export default function PatientForm() {
               <input type="text" name="tokenNumber" className="input-field" placeholder="АВ-123456" value={formData.tokenNumber} onChange={handleChange} />
             </div>
             <div className="input-group">
-              <label className="input-label">№ Истории Болезни</label>
-              <input type="text" name="caseHistoryNumber" className="input-field" value={formData.caseHistoryNumber} onChange={handleChange} />
+              <label className="input-label">Адрес проживания</label>
+              <input type="text" name="address" className="input-field" value={formData.address} onChange={handleChange} />
             </div>
           </div>
-
-          <div className="input-group mt-2" style={{ margin: 0 }}>
-            <label className="input-label">Адрес проживания</label>
-            <input type="text" name="address" className="input-field" value={formData.address} onChange={handleChange} />
-          </div>
           
-          <div className="grid-2 mt-4">
+          <div className="grid-2 mt-2">
             <div className="input-group">
               <label className="input-label">Номер телефона</label>
               <input type="text" name="phoneNumber" className="input-field" value={formData.phoneNumber} onChange={handleChange} placeholder="+7 (___) ___-__-__" />
@@ -265,20 +266,11 @@ export default function PatientForm() {
 
         <div className="card p-4 mb-4">
           <div className="grid-2">
-            {!isEditing && (
-              <div className="input-group">
-                <label className="input-label">Отделение (при поступлении) *</label>
-                <select name="department" className="input-field" value={formData.department} onChange={handleChange}>
-                  {DEPARTMENTS.map(dep => <option key={dep} value={dep}>{dep}</option>)}
-                </select>
-              </div>
-            )}
-            
             <div className="input-group">
-              <label className="input-label">Дата и время поступления *</label>
+              <label className="input-label">Дата и время приема *</label>
               <DatePicker
-                selected={admissionDate}
-                onChange={(date) => setAdmissionDate(date)}
+                selected={consultationDate}
+                onChange={(date) => setConsultationDate(date)}
                 showTimeSelect
                 timeFormat="HH:mm"
                 timeIntervals={5}
@@ -288,21 +280,34 @@ export default function PatientForm() {
                 required
               />
             </div>
+            <div className="input-group">
+              <label className="input-label">Дата следующего визита</label>
+              <DatePicker
+                selected={nextConsultationDate}
+                onChange={(date) => setNextConsultationDate(date)}
+                showTimeSelect
+                timeFormat="HH:mm"
+                timeIntervals={5}
+                dateFormat="dd.MM.yyyy HH:mm"
+                locale={ru}
+                className="input-field"
+                isClearable
+                placeholderText="Не назначена"
+              />
+            </div>
           </div>
 
-          <ICD10Autocomplete label="Диагноз при поступлении (МКБ-10)" name="admissionDiagnosis" value={formData.admissionDiagnosis} onChange={handleChange} />
-          <ICD10Autocomplete label="Клинический диагноз (МКБ-10)" name="clinicalDiagnosis" value={formData.clinicalDiagnosis} onChange={handleChange} />
-          <ICD10Autocomplete label="Заключительный диагноз (МКБ-10)" name="finalDiagnosis" value={formData.finalDiagnosis} onChange={handleChange} />
+          <ICD10Autocomplete label="Диагноз (МКБ-10)" name="diagnosis" value={formData.diagnosis} onChange={handleChange} />
           
           <div className="input-group mt-2 mb-0">
-            <label className="input-label">Осложнения и сопутствующие заболевания</label>
+            <label className="input-label">Жалобы, анамнез, рекомендации (заметки)</label>
             <textarea 
-              name="complications" 
+              name="notes" 
               className="input-field" 
-              style={{ minHeight: '80px', resize: 'vertical' }}
-              value={formData.complications} 
+              style={{ minHeight: '120px', resize: 'vertical' }}
+              value={formData.notes} 
               onChange={handleChange}
-              placeholder="Введите сопутствующие диагнозы и осложнения..."
+              placeholder="Введите описание приема и рекомендации..."
             ></textarea>
           </div>
         </div>
