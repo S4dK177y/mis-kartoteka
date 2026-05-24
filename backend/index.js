@@ -746,58 +746,51 @@ app.get('/api/persons', authenticateToken, async (req, res) => {
     const patients = await prisma.patient.findMany({ orderBy: { createdAt: 'desc' } });
     const consultations = await prisma.consultation.findMany({ orderBy: { createdAt: 'desc' } });
     
+    const allEncounters = [
+      ...patients.map(p => ({ ...p, type: 'patient', encounterDate: p.admissionDate })),
+      ...consultations.map(c => ({ ...c, type: 'consultation', encounterDate: c.consultationDate }))
+    ].sort((a, b) => {
+      const dateA = a.encounterDate ? new Date(a.encounterDate).getTime() : 0;
+      const dateB = b.encounterDate ? new Date(b.encounterDate).getTime() : 0;
+      return dateA - dateB;
+    });
+
     const personsMap = new Map();
 
-    const processRecord = (rec, type) => {
+    for (const rec of allEncounters) {
       const pId = rec.personId || rec.id;
       if (!personsMap.has(pId)) {
         personsMap.set(pId, {
           personId: pId,
-          fullName: rec.fullName,
-          birthDate: rec.birthDate,
-          tokenNumber: rec.tokenNumber,
-          rank: rec.rank,
-          militaryUnit: rec.militaryUnit,
-          militaryStatus: rec.militaryStatus,
-          isSvoParticipant: rec.isSvoParticipant,
-          address: rec.address,
-          phoneNumber: rec.phoneNumber,
-          relativeRelation: rec.relativeRelation,
-          relativeFullName: rec.relativeFullName,
-          relativePhone: rec.relativePhone,
-          relativeAddress: rec.relativeAddress,
-          latestEncounterDate: type === 'patient' ? rec.admissionDate : rec.consultationDate,
           hospitalizationsCount: 0,
           consultationsCount: 0,
         });
       }
       
       const p = personsMap.get(pId);
-      if (type === 'patient') p.hospitalizationsCount++;
-      if (type === 'consultation') p.consultationsCount++;
+      if (rec.type === 'patient') p.hospitalizationsCount++;
+      if (rec.type === 'consultation') p.consultationsCount++;
       
-      const encounterDate = type === 'patient' ? rec.admissionDate : rec.consultationDate;
-      if (encounterDate && p.latestEncounterDate && encounterDate > p.latestEncounterDate) {
-        p.latestEncounterDate = encounterDate;
-        p.fullName = rec.fullName || p.fullName;
-        p.tokenNumber = rec.tokenNumber || p.tokenNumber;
-        p.rank = rec.rank || p.rank;
-        p.militaryUnit = rec.militaryUnit || p.militaryUnit;
-        p.militaryStatus = rec.militaryStatus || p.militaryStatus;
+      p.fullName = rec.fullName || p.fullName;
+      p.birthDate = rec.birthDate || p.birthDate;
+      p.tokenNumber = rec.tokenNumber || p.tokenNumber;
+      p.rank = rec.rank || p.rank;
+      p.militaryUnit = rec.militaryUnit || p.militaryUnit;
+      p.militaryStatus = rec.militaryStatus || p.militaryStatus;
+      if (rec.isSvoParticipant !== undefined && rec.isSvoParticipant !== null) {
         p.isSvoParticipant = rec.isSvoParticipant;
-        p.address = rec.address || p.address;
-        p.phoneNumber = rec.phoneNumber || p.phoneNumber;
-        p.relativeRelation = rec.relativeRelation || p.relativeRelation;
-        p.relativeFullName = rec.relativeFullName || p.relativeFullName;
-        p.relativePhone = rec.relativePhone || p.relativePhone;
-        p.relativeAddress = rec.relativeAddress || p.relativeAddress;
-      } else if (!p.latestEncounterDate) {
-        p.latestEncounterDate = encounterDate;
       }
-    };
-
-    patients.forEach(p => processRecord(p, 'patient'));
-    consultations.forEach(c => processRecord(c, 'consultation'));
+      p.address = rec.address || p.address;
+      p.phoneNumber = rec.phoneNumber || p.phoneNumber;
+      p.relativeRelation = rec.relativeRelation || p.relativeRelation;
+      p.relativeFullName = rec.relativeFullName || p.relativeFullName;
+      p.relativePhone = rec.relativePhone || p.relativePhone;
+      p.relativeAddress = rec.relativeAddress || p.relativeAddress;
+      
+      if (rec.encounterDate) {
+        p.latestEncounterDate = rec.encounterDate;
+      }
+    }
 
     const personsList = Array.from(personsMap.values()).sort((a, b) => {
       if (!a.latestEncounterDate) return 1;
@@ -823,15 +816,21 @@ app.get('/api/persons/:personId', authenticateToken, async (req, res) => {
       orderBy: { createdAt: 'desc' } 
     });
     
-    // Attempt to build a person profile from the latest record
+    const allEncounters = [
+      ...patients.map(p => ({ ...p, type: 'patient', encounterDate: p.admissionDate })),
+      ...consultations.map(c => ({ ...c, type: 'consultation', encounterDate: c.consultationDate }))
+    ].sort((a, b) => {
+      const dateA = a.encounterDate ? new Date(a.encounterDate).getTime() : 0;
+      const dateB = b.encounterDate ? new Date(b.encounterDate).getTime() : 0;
+      return dateA - dateB;
+    });
+
     let personInfo = null;
-    let latestEncounterDate = null;
-    
-    const processRecord = (rec, type) => {
-      const encounterDate = type === 'patient' ? rec.admissionDate : rec.consultationDate;
-      if (!personInfo || (encounterDate && latestEncounterDate && encounterDate > latestEncounterDate)) {
+
+    for (const rec of allEncounters) {
+      if (!personInfo) {
         personInfo = {
-          personId: rec.personId,
+          personId: rec.personId || rec.id,
           fullName: rec.fullName,
           birthDate: rec.birthDate,
           tokenNumber: rec.tokenNumber,
@@ -846,14 +845,24 @@ app.get('/api/persons/:personId', authenticateToken, async (req, res) => {
           relativePhone: rec.relativePhone,
           relativeAddress: rec.relativeAddress,
         };
-        latestEncounterDate = encounterDate;
-      } else if (!latestEncounterDate && encounterDate) {
-        latestEncounterDate = encounterDate;
+      } else {
+        personInfo.fullName = rec.fullName || personInfo.fullName;
+        personInfo.birthDate = rec.birthDate || personInfo.birthDate;
+        personInfo.tokenNumber = rec.tokenNumber || personInfo.tokenNumber;
+        personInfo.rank = rec.rank || personInfo.rank;
+        personInfo.militaryUnit = rec.militaryUnit || personInfo.militaryUnit;
+        personInfo.militaryStatus = rec.militaryStatus || personInfo.militaryStatus;
+        if (rec.isSvoParticipant !== undefined && rec.isSvoParticipant !== null) {
+          personInfo.isSvoParticipant = rec.isSvoParticipant;
+        }
+        personInfo.address = rec.address || personInfo.address;
+        personInfo.phoneNumber = rec.phoneNumber || personInfo.phoneNumber;
+        personInfo.relativeRelation = rec.relativeRelation || personInfo.relativeRelation;
+        personInfo.relativeFullName = rec.relativeFullName || personInfo.relativeFullName;
+        personInfo.relativePhone = rec.relativePhone || personInfo.relativePhone;
+        personInfo.relativeAddress = rec.relativeAddress || personInfo.relativeAddress;
       }
-    };
-    
-    patients.forEach(p => processRecord(p, 'patient'));
-    consultations.forEach(c => processRecord(c, 'consultation'));
+    }
     
     if (!personInfo) {
       return res.status(404).json({ error: 'Person not found' });
