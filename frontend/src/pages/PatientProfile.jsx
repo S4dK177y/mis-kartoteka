@@ -378,11 +378,11 @@ export default function PatientProfile() {
               )}
               <div className="flex justify-between border-b pb-1">
                 <span className="text-muted">Отделение:</span>
-                <span style={{ fontWeight: 600, color: 'var(--primary-hover)' }}>{patient.department}</span>
+                <span style={{ fontWeight: 600, color: 'var(--primary-hover)', textAlign: 'right' }}>{patient.department}</span>
               </div>
               <div className="flex justify-between border-b pb-1">
                 <span className="text-muted">Статус:</span>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-2">
                   <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: patient.status === 'На лечении' ? 'var(--primary)' : 'var(--text-muted)' }}></div>
                   <span style={{ fontWeight: 600, color: patient.status === 'На лечении' ? 'var(--primary-hover)' : 'var(--text-muted)' }}>
                     {patient.status}

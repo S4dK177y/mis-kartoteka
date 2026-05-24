@@ -971,7 +971,8 @@ app.get('/api/export/patients', authenticateToken, async (req, res) => {
     worksheet.columns = [
       { header: 'Тип записи', key: 'recordType', width: 18 },
       { header: '№ ИБ', key: 'caseHistoryNumber', width: 15 },
-      { header: 'Дата приема/поступления', key: 'date', width: 20 },
+      { header: 'Дата приема/поступления', key: 'date', width: 15 },
+      { header: 'Время', key: 'time', width: 10 },
       { header: 'Статус службы', key: 'militaryStatus', width: 15 },
       { header: 'Участник СВО', key: 'isSvoParticipant', width: 15 },
       { header: 'Звание', key: 'rank', width: 15 },
@@ -987,7 +988,8 @@ app.get('/api/export/patients', authenticateToken, async (req, res) => {
       { header: 'Диагнозы (все)', key: 'allDiagnoses', width: 40 },
       { header: 'Отделение', key: 'department', width: 25 },
       { header: 'Статус', key: 'status', width: 15 },
-      { header: 'Дата выписки/След. визит', key: 'endDate', width: 20 },
+      { header: 'Дата выписки/След. визит', key: 'endDate', width: 15 },
+      { header: 'Время (выписка/след. визит)', key: 'endTime', width: 15 },
       { header: 'Куда выписан/Заметки', key: 'notes', width: 30 }
     ];
 
@@ -1001,7 +1003,8 @@ app.get('/api/export/patients', authenticateToken, async (req, res) => {
       worksheet.addRow({
         recordType: 'Стационар',
         caseHistoryNumber: p.caseHistoryNumber || '',
-        date: p.admissionDate.toISOString().replace('T', ' ').substring(0, 16),
+        date: p.admissionDate.toISOString().split('T')[0],
+        time: p.admissionDate.toISOString().split('T')[1].substring(0, 5),
         militaryStatus: p.militaryStatus || '',
         isSvoParticipant: p.isSvoParticipant ? 'Да' : 'Нет',
         rank: p.rank || '',
@@ -1017,7 +1020,8 @@ app.get('/api/export/patients', authenticateToken, async (req, res) => {
         allDiagnoses: [p.admissionDiagnosis, p.clinicalDiagnosis, p.finalDiagnosis].filter(Boolean).join('; '),
         department: p.department || '',
         status: p.status || '',
-        endDate: p.dischargeDate ? p.dischargeDate.toISOString().replace('T', ' ').substring(0, 16) : '',
+        endDate: p.dischargeDate ? p.dischargeDate.toISOString().split('T')[0] : '',
+        endTime: p.dischargeDate ? p.dischargeDate.toISOString().split('T')[1].substring(0, 5) : '',
         notes: p.dischargeDestination || ''
       });
     });
@@ -1026,7 +1030,8 @@ app.get('/api/export/patients', authenticateToken, async (req, res) => {
       worksheet.addRow({
         recordType: 'Амбулатория',
         caseHistoryNumber: '-',
-        date: c.consultationDate.toISOString().replace('T', ' ').substring(0, 16),
+        date: c.consultationDate.toISOString().split('T')[0],
+        time: c.consultationDate.toISOString().split('T')[1].substring(0, 5),
         militaryStatus: c.militaryStatus || '',
         isSvoParticipant: c.isSvoParticipant ? 'Да' : 'Нет',
         rank: c.rank || '',
@@ -1042,7 +1047,8 @@ app.get('/api/export/patients', authenticateToken, async (req, res) => {
         allDiagnoses: c.diagnosis || '',
         department: '-',
         status: '-',
-        endDate: c.nextConsultationDate ? c.nextConsultationDate.toISOString().replace('T', ' ').substring(0, 16) : '',
+        endDate: c.nextConsultationDate ? c.nextConsultationDate.toISOString().split('T')[0] : '',
+        endTime: c.nextConsultationDate ? c.nextConsultationDate.toISOString().split('T')[1].substring(0, 5) : '',
         notes: c.notes || ''
       });
     });
