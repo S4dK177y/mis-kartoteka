@@ -411,6 +411,7 @@ app.post('/api/patients', authenticateToken, async (req, res) => {
   try {
     const { 
       tokenNumber, caseHistoryNumber, rank, militaryUnit, militaryStatus, isSvoParticipant, fullName, birthDate, address, 
+      phoneNumber, relativeRelation, relativeFullName, relativePhone, relativeAddress,
       admissionDiagnosis, clinicalDiagnosis, finalDiagnosis, complications,
       department, admissionDate, personId
     } = req.body;
@@ -463,6 +464,11 @@ app.post('/api/patients', authenticateToken, async (req, res) => {
         fullName,
         birthDate: new Date(birthDate),
         address,
+        phoneNumber,
+        relativeRelation,
+        relativeFullName,
+        relativePhone,
+        relativeAddress,
         admissionDiagnosis,
         clinicalDiagnosis,
         finalDiagnosis,
@@ -491,6 +497,7 @@ app.put('/api/patients/:id', authenticateToken, async (req, res) => {
   try {
     const { 
       tokenNumber, caseHistoryNumber, rank, militaryUnit, militaryStatus, isSvoParticipant, fullName, birthDate, address, 
+      phoneNumber, relativeRelation, relativeFullName, relativePhone, relativeAddress,
       admissionDiagnosis, clinicalDiagnosis, finalDiagnosis, complications,
       department, admissionDate, dischargeDate, dischargeDestination, status 
     } = req.body;
@@ -510,6 +517,11 @@ app.put('/api/patients/:id', authenticateToken, async (req, res) => {
         fullName,
         birthDate: birthDate ? new Date(birthDate) : undefined,
         address,
+        phoneNumber,
+        relativeRelation,
+        relativeFullName,
+        relativePhone,
+        relativeAddress,
         admissionDiagnosis,
         clinicalDiagnosis,
         finalDiagnosis,
@@ -610,7 +622,8 @@ app.post('/api/consultations', authenticateToken, async (req, res) => {
   try {
     const {
       personId, tokenNumber, rank, militaryUnit, militaryStatus, isSvoParticipant,
-      fullName, birthDate, address, diagnosis, consultationDate, nextConsultationDate, notes
+      fullName, birthDate, address, phoneNumber, relativeRelation, relativeFullName, relativePhone, relativeAddress,
+      diagnosis, consultationDate, nextConsultationDate, notes
     } = req.body;
 
     let finalPersonId = personId;
@@ -659,6 +672,11 @@ app.post('/api/consultations', authenticateToken, async (req, res) => {
         fullName,
         birthDate: birthDate ? new Date(birthDate) : undefined,
         address,
+        phoneNumber,
+        relativeRelation,
+        relativeFullName,
+        relativePhone,
+        relativeAddress,
         diagnosis,
         consultationDate: consultationDate ? new Date(consultationDate) : new Date(),
         nextConsultationDate: nextConsultationDate ? new Date(nextConsultationDate) : null,
@@ -678,7 +696,8 @@ app.put('/api/consultations/:id', authenticateToken, async (req, res) => {
   try {
     const {
       tokenNumber, rank, militaryUnit, militaryStatus, isSvoParticipant,
-      fullName, birthDate, address, diagnosis, consultationDate, nextConsultationDate, notes
+      fullName, birthDate, address, phoneNumber, relativeRelation, relativeFullName, relativePhone, relativeAddress,
+      diagnosis, consultationDate, nextConsultationDate, notes
     } = req.body;
 
     const consult = await prisma.consultation.update({
@@ -692,6 +711,11 @@ app.put('/api/consultations/:id', authenticateToken, async (req, res) => {
         fullName,
         birthDate: birthDate ? new Date(birthDate) : undefined,
         address,
+        phoneNumber,
+        relativeRelation,
+        relativeFullName,
+        relativePhone,
+        relativeAddress,
         diagnosis,
         consultationDate: consultationDate ? new Date(consultationDate) : undefined,
         nextConsultationDate: nextConsultationDate ? new Date(nextConsultationDate) : null,

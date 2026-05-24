@@ -38,9 +38,6 @@ export default function PersonProfile() {
       <div className="card p-6">
         <div className="flex items-center gap-4 mb-6 justify-between">
           <div className="flex items-center gap-4">
-            <div style={{ background: 'var(--primary-light)', padding: '1rem', borderRadius: '50%', color: 'var(--primary)' }}>
-              <User size={32} />
-            </div>
             <div>
               <div className="flex items-center gap-3 mb-1">
                 <h2 className="text-2xl font-bold text-primary m-0">{person.fullName}</h2>
