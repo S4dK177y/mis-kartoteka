@@ -7,7 +7,7 @@ import 'react-datepicker/dist/react-datepicker.css';
 import { ru } from 'date-fns/locale';
 import ICD10Autocomplete from '../components/ICD10Autocomplete';
 import { MILITARY_RANKS_GROUPS } from '../ranks';
-import { formatPhone } from '../utils';
+import { usePhoneMask } from '../hooks/usePhoneMask';
 
 export const DEPARTMENTS = [
   'Неврологическое отделение (НО)',
@@ -27,6 +27,7 @@ export default function PatientForm() {
   const location = useLocation();
   const isEditing = Boolean(id);
   const readmissionData = location.state?.readmissionData || null;
+  const { handlePhoneChange } = usePhoneMask();
   
   const [formData, setFormData] = useState({
     personId: readmissionData?.personId || '',
@@ -133,7 +134,7 @@ export default function PatientForm() {
     }
 
     if (name === 'phoneNumber' || name === 'relativePhone') {
-      setFormData(prev => ({ ...prev, [name]: formatPhone(value) }));
+      handlePhoneChange(e, setFormData);
       return;
     }
 

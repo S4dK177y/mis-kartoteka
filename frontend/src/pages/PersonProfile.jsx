@@ -13,7 +13,7 @@ export default function PersonProfile() {
     fetchPerson();
   }, [id]);
 
-  const fetchPerson = async () => {
+  async function fetchPerson() {
     try {
       setLoading(true);
       const data = await api.getPersonProfile(id);

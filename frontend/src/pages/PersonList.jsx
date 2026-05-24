@@ -24,10 +24,7 @@ export default function PersonList() {
     }
   };
 
-  const SortIcon = ({ field }) => {
-    if (sortField !== field) return <SortAsc size={12} style={{opacity: 0.3, cursor: 'pointer'}} />;
-    return <SortAsc size={12} style={{transform: sortOrder === 'desc' ? 'rotate(180deg)' : 'none', color: 'var(--primary)', cursor: 'pointer', transition: 'transform 0.2s'}} />;
-  };
+
 
   useEffect(() => {
     fetchPersons();
@@ -113,7 +110,7 @@ export default function PersonList() {
                 <th>
                   <div className="flex-col gap-1">
                     <span className="flex items-center gap-1 cursor-pointer select-none hover:text-primary" onClick={() => handleSort('fullName')}>
-                      ФИО <SortIcon field="fullName" />
+                      ФИО {sortField !== 'fullName' ? <SortAsc size={12} style={{opacity: 0.3, cursor: 'pointer'}} /> : <SortAsc size={12} style={{transform: sortOrder === 'desc' ? 'rotate(180deg)' : 'none', color: 'var(--primary)', cursor: 'pointer', transition: 'transform 0.2s'}} />}
                     </span>
                   </div>
                 </th>
@@ -122,7 +119,7 @@ export default function PersonList() {
                 <th>
                   <div className="flex-col gap-1">
                     <span className="flex items-center gap-1 cursor-pointer select-none hover:text-primary" onClick={() => handleSort('latestEncounterDate')}>
-                      Последнее обращение <SortIcon field="latestEncounterDate" />
+                      Последнее обращение {sortField !== 'latestEncounterDate' ? <SortAsc size={12} style={{opacity: 0.3, cursor: 'pointer'}} /> : <SortAsc size={12} style={{transform: sortOrder === 'desc' ? 'rotate(180deg)' : 'none', color: 'var(--primary)', cursor: 'pointer', transition: 'transform 0.2s'}} />}
                     </span>
                   </div>
                 </th>

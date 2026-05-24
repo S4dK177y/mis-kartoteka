@@ -7,7 +7,7 @@ import 'react-datepicker/dist/react-datepicker.css';
 import { ru } from 'date-fns/locale';
 import ICD10Autocomplete from '../components/ICD10Autocomplete';
 import { MILITARY_RANKS_GROUPS } from '../ranks';
-import { formatPhone } from '../utils';
+import { usePhoneMask } from '../hooks/usePhoneMask';
 
 export default function ConsultationForm() {
   const { id } = useParams();
@@ -15,6 +15,7 @@ export default function ConsultationForm() {
   const location = useLocation();
   const isEditing = Boolean(id);
   const prefillData = location.state?.prefillData || null;
+  const { handlePhoneChange } = usePhoneMask();
   
   const [formData, setFormData] = useState({
     personId: prefillData?.personId || '',
@@ -120,7 +121,7 @@ export default function ConsultationForm() {
     }
 
     if (name === 'phoneNumber' || name === 'relativePhone') {
-      setFormData(prev => ({ ...prev, [name]: formatPhone(value) }));
+      handlePhoneChange(e, setFormData);
       return;
     }
 
