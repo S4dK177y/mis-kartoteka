@@ -761,6 +761,11 @@ app.get('/api/persons', authenticateToken, async (req, res) => {
           militaryStatus: rec.militaryStatus,
           isSvoParticipant: rec.isSvoParticipant,
           address: rec.address,
+          phoneNumber: rec.phoneNumber,
+          relativeRelation: rec.relativeRelation,
+          relativeFullName: rec.relativeFullName,
+          relativePhone: rec.relativePhone,
+          relativeAddress: rec.relativeAddress,
           latestEncounterDate: type === 'patient' ? rec.admissionDate : rec.consultationDate,
           hospitalizationsCount: 0,
           consultationsCount: 0,
@@ -779,6 +784,13 @@ app.get('/api/persons', authenticateToken, async (req, res) => {
         p.rank = rec.rank || p.rank;
         p.militaryUnit = rec.militaryUnit || p.militaryUnit;
         p.militaryStatus = rec.militaryStatus || p.militaryStatus;
+        p.isSvoParticipant = rec.isSvoParticipant;
+        p.address = rec.address || p.address;
+        p.phoneNumber = rec.phoneNumber || p.phoneNumber;
+        p.relativeRelation = rec.relativeRelation || p.relativeRelation;
+        p.relativeFullName = rec.relativeFullName || p.relativeFullName;
+        p.relativePhone = rec.relativePhone || p.relativePhone;
+        p.relativeAddress = rec.relativeAddress || p.relativeAddress;
       } else if (!p.latestEncounterDate) {
         p.latestEncounterDate = encounterDate;
       }
@@ -828,6 +840,11 @@ app.get('/api/persons/:personId', authenticateToken, async (req, res) => {
           militaryStatus: rec.militaryStatus,
           isSvoParticipant: rec.isSvoParticipant,
           address: rec.address,
+          phoneNumber: rec.phoneNumber,
+          relativeRelation: rec.relativeRelation,
+          relativeFullName: rec.relativeFullName,
+          relativePhone: rec.relativePhone,
+          relativeAddress: rec.relativeAddress,
         };
         latestEncounterDate = encounterDate;
       } else if (!latestEncounterDate && encounterDate) {
