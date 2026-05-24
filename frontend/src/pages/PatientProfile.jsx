@@ -597,12 +597,12 @@ export default function PatientProfile() {
         <div className="card p-4" style={{ gridColumn: 'span 3' }}>
           <div className="flex items-center gap-2 mb-4">
             <FileText size={20} className="text-secondary" />
-            <h3 className="text-lg m-0" style={{ color: 'var(--secondary)' }}>История амбулаторных консультаций</h3>
+            <h3 className="text-lg m-0" style={{ color: 'var(--text)' }}>История амбулаторных приемов</h3>
           </div>
           
           {(!patient.consultations || patient.consultations.length === 0) ? (
             <div className="text-center text-muted p-4" style={{ background: 'var(--bg-main)', borderRadius: 'var(--radius-md)' }}>
-              <p className="m-0">История консультаций отсутствует</p>
+              <p className="m-0">История приемов отсутствует</p>
             </div>
           ) : (
             <div style={{ overflowX: 'auto' }}>
