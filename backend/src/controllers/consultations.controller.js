@@ -3,7 +3,15 @@ const { logAction } = require('../utils/logger');
 
 exports.getAll = async (req, res) => {
   try {
-    const consultations = await prisma.consultation.findMany({ orderBy: { consultationDate: 'desc' } });
+    const consultations = await prisma.consultation.findMany({ 
+      include: {
+        documents: {
+          include: { uploader: { select: { username: true } } },
+          orderBy: { createdAt: 'desc' }
+        }
+      },
+      orderBy: { consultationDate: 'desc' } 
+    });
     res.json(consultations);
   } catch (error) {
     res.status(500).json({ error: 'Internal Server Error' });

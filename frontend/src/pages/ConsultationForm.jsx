@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { api } from '../api';
-import { Save, ArrowLeft, Trash2 } from 'lucide-react';
+import { Save, ArrowLeft, Trash2, Upload, Download, FileText, Image, FileArchive, FileAudio, FileVideo, File as FileIcon } from 'lucide-react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { ru } from 'date-fns/locale';
@@ -38,6 +38,9 @@ export default function ConsultationForm() {
   const [consultationDate, setConsultationDate] = useState(new Date());
   const [nextConsultationDate, setNextConsultationDate] = useState(null);
   const [birthDate, setBirthDate] = useState(prefillData?.birthDate ? new Date(prefillData.birthDate) : null);
+  const [documents, setDocuments] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   const [loading, setLoading] = useState(isEditing);
 
@@ -80,6 +83,10 @@ export default function ConsultationForm() {
 
       if (data.nextConsultationDate) {
         setNextConsultationDate(new Date(data.nextConsultationDate));
+      }
+      
+      if (data.documents) {
+        setDocuments(data.documents);
       }
     } catch (error) {
       console.error(error);
@@ -164,6 +171,59 @@ export default function ConsultationForm() {
       } catch (error) {
         console.error(error);
         alert('Ошибка при удалении');
+      }
+    }
+  };
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      await api.uploadConsultationDocument(id, file);
+      await fetchConsultation();
+    } catch (error) {
+      alert('Ошибка при загрузке файла');
+    } finally {
+      setUploading(false);
+      if (e.target) e.target.value = null; 
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      setUploading(true);
+      try {
+        await api.uploadConsultationDocument(id, file);
+        await fetchConsultation();
+      } catch (error) {
+        alert('Ошибка при загрузке файла');
+      } finally {
+        setUploading(false);
+      }
+    }
+  };
+
+  const handleDeleteDocument = async (docId) => {
+    if (window.confirm('Удалить этот документ?')) {
+      try {
+        await api.deleteDocument(docId);
+        await fetchConsultation();
+      } catch (error) {
+        alert('Ошибка при удалении файла');
       }
     }
   };
@@ -341,6 +401,88 @@ export default function ConsultationForm() {
               placeholder="Введите описание приема и рекомендации..."
             ></textarea>
           </div>
+        </div>
+
+        {/* Files Section */}
+        <div className="card p-4 mb-4">
+          <div className="flex items-center gap-2 mb-4 border-b pb-2">
+            <FileText size={20} className="text-primary" />
+            <h3 className="text-lg m-0 text-primary">Файлы приема</h3>
+          </div>
+          
+          {!isEditing ? (
+            <div className="text-center text-muted p-4" style={{ background: 'var(--bg-main)', borderRadius: 'var(--radius-md)' }}>
+              <p className="m-0">Сохраните амбулаторный прием, чтобы получить возможность прикреплять файлы.</p>
+            </div>
+          ) : (
+            <div className="flex-col gap-4">
+              <div 
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                style={{
+                  border: isDragging ? '2px dashed var(--primary)' : '2px dashed var(--border-light)',
+                  background: isDragging ? 'var(--primary-light)' : 'var(--bg-input)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '1.5rem 1rem',
+                  textAlign: 'center',
+                  transition: 'all 0.2s',
+                }}
+              >
+                <input type="file" id="file-upload" style={{ display: 'none' }} onChange={handleFileUpload} disabled={uploading}/>
+                <label htmlFor="file-upload" style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                  <Upload size={24} style={{ color: isDragging ? 'var(--primary)' : 'var(--text-muted)' }} />
+                  <span className="text-sm text-muted">
+                    {uploading ? 'Загрузка...' : 'Перетащите файл сюда или нажмите для выбора'}
+                  </span>
+                </label>
+              </div>
+
+              {documents.length === 0 ? (
+                <div className="text-center text-muted p-4">
+                  <FileText size={24} className="mx-auto mb-1 opacity-50" />
+                  <p className="text-xs">Нет загруженных файлов</p>
+                </div>
+              ) : (
+                <div className="grid-2 gap-2">
+                  {documents.map(doc => (
+                    <div key={doc.id} className="flex justify-between items-center p-3" style={{ background: 'var(--bg-main)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-light)' }}>
+                      <div className="flex items-center gap-3" style={{ overflow: 'hidden' }}>
+                        {(() => {
+                          const lowerName = doc.originalName.toLowerCase();
+                          const lowerMime = doc.mimeType.toLowerCase();
+                          if (lowerName.endsWith('.pdf')) return <FileText size={20} style={{ color: '#ef4444', flexShrink: 0 }} />;
+                          if (lowerMime.startsWith('image/')) return <Image size={20} style={{ color: '#0ea5e9', flexShrink: 0 }} />;
+                          if (lowerMime.startsWith('video/')) return <FileVideo size={20} style={{ color: '#a855f7', flexShrink: 0 }} />;
+                          if (lowerMime.startsWith('audio/')) return <FileAudio size={20} style={{ color: '#f59e0b', flexShrink: 0 }} />;
+                          if (lowerName.endsWith('.zip') || lowerName.endsWith('.rar') || lowerName.endsWith('.7z')) return <FileArchive size={20} style={{ color: '#f59e0b', flexShrink: 0 }} />;
+                          if (lowerName.endsWith('.doc') || lowerName.endsWith('.docx')) return <FileText size={20} style={{ color: '#2563eb', flexShrink: 0 }} />;
+                          if (lowerName.endsWith('.xls') || lowerName.endsWith('.xlsx')) return <FileText size={20} style={{ color: '#10b981', flexShrink: 0 }} />;
+                          return <FileIcon size={20} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />;
+                        })()}
+                        <div className="flex-col" style={{ overflow: 'hidden' }}>
+                          <span style={{ fontSize: '0.85rem', fontWeight: 500, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }} title={doc.originalName}>
+                            {doc.originalName}
+                          </span>
+                          <div className="text-muted text-xs mt-1">
+                            {new Date(doc.createdAt).toLocaleDateString()} {doc.uploader?.username ? `• загрузил(а) ${doc.uploader.username}` : ''}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex gap-1 flex-shrink-0">
+                        <a href={api.getDocumentUrl(doc.id)} className="btn btn-icon" style={{ color: 'var(--primary)', background: 'transparent', padding: '0.3rem' }} title="Скачать">
+                          <Download size={16} />
+                        </a>
+                        <button type="button" className="btn btn-icon" style={{ color: 'var(--danger)', background: 'transparent', padding: '0.3rem' }} onClick={() => handleDeleteDocument(doc.id)} title="Удалить">
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="flex justify-end gap-2">

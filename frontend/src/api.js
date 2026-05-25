@@ -164,8 +164,18 @@ export const api = {
   uploadDocument: async (patientId, file) => {
     const formData = new FormData();
     formData.append('file', file);
-    
     const res = await fetchWithAuth(`${API_URL}/patients/${patientId}/documents`, {
+      method: 'POST',
+      body: formData
+    });
+    if (!res.ok) throw new Error('Failed to upload document');
+    return res.json();
+  },
+
+  uploadConsultationDocument: async (consultationId, file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetchWithAuth(`${API_URL}/consultations/${consultationId}/documents`, {
       method: 'POST',
       body: formData
     });

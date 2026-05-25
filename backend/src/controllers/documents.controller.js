@@ -11,7 +11,14 @@ exports.upload = async (req, res) => {
     const file = req.file;
     if (!file) return res.status(400).json({ error: 'No file uploaded' });
 
-    const patient = await prisma.patient.findUnique({ where: { id: req.params.patientId }});
+    let personId = null;
+    if (req.params.patientId) {
+      const patient = await prisma.patient.findUnique({ where: { id: req.params.patientId }});
+      personId = patient ? patient.personId : null;
+    } else if (req.params.consultationId) {
+      const consultation = await prisma.consultation.findUnique({ where: { id: req.params.consultationId }});
+      personId = consultation ? consultation.personId : null;
+    }
 
     const document = await prisma.document.create({
       data: {
@@ -19,13 +26,15 @@ exports.upload = async (req, res) => {
         originalName: file.originalname,
         mimeType: file.mimetype,
         size: file.size,
-        patientId: req.params.patientId,
-        personId: patient ? patient.personId : null,
+        patientId: req.params.patientId || null,
+        consultationId: req.params.consultationId || null,
+        personId: personId,
         uploadedById: req.user.id
       }
     });
 
-    await logAction(req.user.id, 'UPLOAD', 'Document', document.id, { originalName: file.originalname, patientId: req.params.patientId });
+    const entityId = req.params.patientId || req.params.consultationId;
+    await logAction(req.user.id, 'UPLOAD', 'Document', document.id, { originalName: file.originalname, entityId });
     res.status(201).json(document);
   } catch (error) {
     res.status(500).json({ error: 'Internal Server Error', details: error.message });
@@ -46,7 +55,8 @@ exports.download = async (req, res) => {
     const document = await prisma.document.findUnique({ where: { id: req.params.id } });
     if (!document) return res.status(404).json({ error: 'Document not found' });
 
-    const filePath = path.join(storageDir, document.patientId, document.filename);
+    const entityId = document.patientId || document.consultationId || 'unassigned';
+    const filePath = path.join(storageDir, entityId, document.filename);
     if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'File not found on disk' });
 
     const inline = req.query.inline === 'true';
@@ -65,7 +75,8 @@ exports.remove = async (req, res) => {
     const document = await prisma.document.findUnique({ where: { id: req.params.id } });
     if (!document) return res.status(404).json({ error: 'Document not found' });
 
-    const filePath = path.join(storageDir, document.patientId, document.filename);
+    const entityId = document.patientId || document.consultationId || 'unassigned';
+    const filePath = path.join(storageDir, entityId, document.filename);
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
     }

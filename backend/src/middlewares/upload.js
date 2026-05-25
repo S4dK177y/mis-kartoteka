@@ -9,12 +9,12 @@ if (!fs.existsSync(storageDir)) {
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const patientId = req.params.patientId || 'unassigned';
-    const patientDir = path.join(storageDir, patientId);
-    if (!fs.existsSync(patientDir)) {
-      fs.mkdirSync(patientDir, { recursive: true });
+    const entityId = req.params.patientId || req.params.consultationId || 'unassigned';
+    const entityDir = path.join(storageDir, entityId);
+    if (!fs.existsSync(entityDir)) {
+      fs.mkdirSync(entityDir, { recursive: true });
     }
-    cb(null, patientDir);
+    cb(null, entityDir);
   },
   filename: (req, file, cb) => {
     file.originalname = Buffer.from(file.originalname, 'latin1').toString('utf8');
