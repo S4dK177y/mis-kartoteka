@@ -23,15 +23,18 @@ app.use(cookieParser());
 // Request logging middleware
 app.use((req, res, next) => {
   const start = Date.now();
+  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || req.ip;
+  const cleanIp = ip && ip.startsWith('::ffff:') ? ip.replace('::ffff:', '') : ip;
+  
   res.on('finish', () => {
     const duration = Date.now() - start;
     const status = res.statusCode;
     if (req.originalUrl.startsWith('/assets/') || req.originalUrl === '/favicon.ico') return;
 
     if (status >= 400) {
-      console.log(`[ОШИБКА] ${req.method} ${req.originalUrl} - Статус: ${status} (${duration}ms)`);
+      console.log(`[ОШИБКА] [${cleanIp}] ${req.method} ${req.originalUrl} - Статус: ${status} (${duration}ms)`);
     } else {
-      console.log(`[СИСТЕМА] ${req.method} ${req.originalUrl} - Статус: ${status} (${duration}ms)`);
+      console.log(`[СИСТЕМА] [${cleanIp}] ${req.method} ${req.originalUrl} - Статус: ${status} (${duration}ms)`);
     }
   });
   next();
