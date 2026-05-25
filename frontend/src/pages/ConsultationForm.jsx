@@ -32,7 +32,20 @@ export default function ConsultationForm() {
     relativePhone: prefillData?.relativePhone || '',
     relativeAddress: prefillData?.relativeAddress || '',
     diagnosis: '',
-    notes: ''
+    notes: '',
+    type: 'REGULAR',
+  });
+  
+  const [vvkConclusion, setVvkConclusion] = useState({
+    status: 'IN_PROGRESS',
+    neurologistCategory: '',
+    ophthalmologistCategory: '',
+    dentistCategory: '',
+    surgeonCategory: '',
+    therapistCategory: '',
+    finalCategory: '',
+    medicalLeaveDays: '',
+    isMedicalLeave: false
   });
   
   const [consultationDate, setConsultationDate] = useState(new Date());
@@ -42,6 +55,8 @@ export default function ConsultationForm() {
   const [archiveDocuments, setArchiveDocuments] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [uploadingVvk, setUploadingVvk] = useState(false);
+  const [vvkDocument, setVvkDocument] = useState(null);
 
   const [loading, setLoading] = useState(isEditing);
 
@@ -74,8 +89,22 @@ export default function ConsultationForm() {
         relativePhone: data.relativePhone || '',
         relativeAddress: data.relativeAddress || '',
         diagnosis: data.diagnosis || '',
-        notes: data.notes || ''
+        notes: data.notes || '',
+        type: data.type || 'REGULAR'
       });
+      if (data.vvkConclusion) {
+        setVvkConclusion({
+          status: data.vvkConclusion.status || 'IN_PROGRESS',
+          neurologistCategory: data.vvkConclusion.neurologistCategory || '',
+          ophthalmologistCategory: data.vvkConclusion.ophthalmologistCategory || '',
+          dentistCategory: data.vvkConclusion.dentistCategory || '',
+          surgeonCategory: data.vvkConclusion.surgeonCategory || '',
+          therapistCategory: data.vvkConclusion.therapistCategory || '',
+          finalCategory: data.vvkConclusion.finalCategory || '',
+          medicalLeaveDays: data.vvkConclusion.medicalLeaveDays || '',
+          isMedicalLeave: !!data.vvkConclusion.medicalLeaveDays
+        });
+      }
       setConsultationDate(new Date(data.consultationDate));
       
       const bd = new Date(data.birthDate);
@@ -87,6 +116,10 @@ export default function ConsultationForm() {
       
       if (data.documents) {
         setDocuments(data.documents);
+        const vvkDoc = data.documents.find(d => data.vvkConclusion && d.id === data.vvkConclusion.documentId);
+        if (vvkDoc) {
+          setVvkDocument(vvkDoc);
+        }
       }
       if (data.archiveDocuments) {
         setArchiveDocuments(data.archiveDocuments);
@@ -138,6 +171,39 @@ export default function ConsultationForm() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleVvkChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    const val = type === 'checkbox' ? checked : value;
+    
+    setVvkConclusion(prev => {
+      const next = { ...prev, [name]: val };
+      
+      // Auto-calculate final category if all 5 are filled
+      if (name !== 'finalCategory' && name !== 'medicalLeaveDays' && name !== 'isMedicalLeave') {
+        // Auto-calculate final category if all 5 are filled and we're completing or just updating
+        if (!next.isMedicalLeave) {
+          const cats = [
+            next.neurologistCategory, next.ophthalmologistCategory, 
+            next.dentistCategory, next.surgeonCategory, next.therapistCategory
+          ].filter(Boolean);
+          
+          if (cats.length === 5) {
+            // Priority: Д > Г > В > Б > А. And within letter: 4 > 3 > 2 > 1.
+            const getScore = (c) => {
+              const letter = c.charAt(0).toUpperCase();
+              const num = parseInt(c.slice(2)) || 0;
+              const map = { 'А': 10, 'Б': 20, 'В': 30, 'Г': 40, 'Д': 50 };
+              return (map[letter] || 0) + num;
+            };
+            const sortedCats = [...cats].sort((a, b) => getScore(b) - getScore(a)); // desc
+            next.finalCategory = sortedCats[0];
+          }
+        }
+      }
+      return next;
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -151,8 +217,35 @@ export default function ConsultationForm() {
         ...formData,
         consultationDate: consultationDate.toISOString(),
         birthDate: birthDate.toISOString(),
-        nextConsultationDate: nextConsultationDate ? nextConsultationDate.toISOString() : null
+        nextConsultationDate: nextConsultationDate ? nextConsultationDate.toISOString() : null,
+        vvkConclusion: formData.type === 'VVK' ? {
+          status: vvkConclusion.status,
+          neurologistCategory: vvkConclusion.neurologistCategory || null,
+          ophthalmologistCategory: vvkConclusion.ophthalmologistCategory || null,
+          dentistCategory: vvkConclusion.dentistCategory || null,
+          surgeonCategory: vvkConclusion.surgeonCategory || null,
+          therapistCategory: vvkConclusion.therapistCategory || null,
+          finalCategory: vvkConclusion.isMedicalLeave ? 'Г' : (vvkConclusion.finalCategory || null),
+          medicalLeaveDays: vvkConclusion.isMedicalLeave ? (parseInt(vvkConclusion.medicalLeaveDays) || 0) : null
+        } : null
       };
+
+      if (formData.type === 'VVK' && vvkConclusion.status === 'COMPLETED') {
+        const requiredFields = ['neurologistCategory', 'ophthalmologistCategory', 'dentistCategory', 'surgeonCategory', 'therapistCategory'];
+        const isComplete = requiredFields.every(f => vvkConclusion[f]);
+        if (!isComplete) {
+          alert("Для завершения ВВК необходимо заполнить решения всех 5 врачей.");
+          return;
+        }
+        if (vvkConclusion.isMedicalLeave && !vvkConclusion.medicalLeaveDays) {
+          alert("Укажите количество суток отпуска по болезни для завершения.");
+          return;
+        }
+        if (!vvkConclusion.isMedicalLeave && !vvkConclusion.finalCategory) {
+          alert("Укажите итоговую категорию ВВК для завершения.");
+          return;
+        }
+      }
 
       if (isEditing) {
         await api.updateConsultation(id, submissionData);
@@ -189,6 +282,21 @@ export default function ConsultationForm() {
       alert('Ошибка при загрузке файла');
     } finally {
       setUploading(false);
+      if (e.target) e.target.value = null; 
+    }
+  };
+
+  const handleVvkFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploadingVvk(true);
+    try {
+      await api.uploadConsultationVvkDocument(id, file);
+      await fetchConsultation();
+    } catch (error) {
+      alert('Ошибка при загрузке скана заключения ВВК');
+    } finally {
+      setUploadingVvk(false);
       if (e.target) e.target.value = null; 
     }
   };
@@ -251,6 +359,20 @@ export default function ConsultationForm() {
 
       <form onSubmit={handleSubmit}>
         <div className="card p-4 mb-4">
+          <div className="flex items-center gap-4 mb-4 pb-2 border-b">
+            <h3 className="text-lg m-0 text-primary">Тип приема</h3>
+            <div className="flex gap-4 ml-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="type" value="REGULAR" checked={formData.type === 'REGULAR'} onChange={handleChange} />
+                <span>Обычный прием</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="type" value="VVK" checked={formData.type === 'VVK'} onChange={handleChange} />
+                <span style={{ fontWeight: 600 }}>ВВК</span>
+              </label>
+            </div>
+          </div>
+
           <div className="grid-2">
             <div className="input-group">
               <label className="input-label">ФИО (Полностью) *</label>
@@ -405,6 +527,105 @@ export default function ConsultationForm() {
             ></textarea>
           </div>
         </div>
+
+        {formData.type === 'VVK' && (
+          <div className="card p-6 mb-4" style={{ borderTop: '4px solid #3b82f6', boxShadow: 'var(--shadow-md)' }}>
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl m-0 font-bold" style={{ color: '#1e293b' }}>ВВК</h3>
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-semibold text-muted">Статус:</span>
+                <select 
+                  name="status" 
+                  className="input-field" 
+                  style={{ width: 'auto', fontWeight: 600, color: vvkConclusion.status === 'COMPLETED' ? '#166534' : '#b45309', backgroundColor: vvkConclusion.status === 'COMPLETED' ? '#f0fdf4' : '#fffbeb', borderColor: vvkConclusion.status === 'COMPLETED' ? '#bbf7d0' : '#fde68a' }} 
+                  value={vvkConclusion.status} 
+                  onChange={handleVvkChange}
+                >
+                  <option value="IN_PROGRESS">В процессе</option>
+                  <option value="COMPLETED">Завершено</option>
+                </select>
+              </div>
+            </div>
+            
+            <div className="grid gap-4 mb-6" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
+              {['neurologist', 'ophthalmologist', 'dentist', 'surgeon', 'therapist'].map(doctor => {
+                const labelMap = { neurologist: 'Невролог', ophthalmologist: 'Офтальмолог', dentist: 'Стоматолог', surgeon: 'Хирург', therapist: 'Терапевт' };
+                const name = `${doctor}Category`;
+                const isCompleted = vvkConclusion.status === 'COMPLETED';
+                return (
+                  <div key={doctor} className="p-4" style={{ backgroundColor: '#f8fafc', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+                    <label className="block text-sm font-bold text-muted mb-2">{labelMap[doctor]} {isCompleted && '*'}</label>
+                    <select name={name} className="input-field" style={{ backgroundColor: 'white' }} value={vvkConclusion[name]} onChange={handleVvkChange} required={isCompleted}>
+                      <option value="">--</option>
+                      <option value="А">А</option><option value="А-1">А-1</option><option value="А-2">А-2</option><option value="А-3">А-3</option><option value="А-4">А-4</option>
+                      <option value="Б-1">Б-1</option><option value="Б-2">Б-2</option><option value="Б-3">Б-3</option><option value="Б-4">Б-4</option>
+                      <option value="В">В</option><option value="Г">Г</option><option value="Д">Д</option>
+                    </select>
+                  </div>
+                );
+              })}
+            </div>
+            
+            <div className="p-5 mb-4" style={{ background: vvkConclusion.status === 'COMPLETED' ? '#f0fdf4' : '#f8fafc', border: `1px solid ${vvkConclusion.status === 'COMPLETED' ? '#bbf7d0' : 'var(--border)'}`, borderRadius: 'var(--radius-md)' }}>
+              <div className="flex justify-between items-center mb-4">
+                <h4 className="text-lg font-bold m-0" style={{ color: vvkConclusion.status === 'COMPLETED' ? '#166534' : 'inherit' }}>Итог ВВК {vvkConclusion.status === 'COMPLETED' && '*'}</h4>
+                <label className="flex items-center gap-2 cursor-pointer bg-white px-3 py-1.5 rounded-full border shadow-sm">
+                  <input type="checkbox" name="isMedicalLeave" checked={vvkConclusion.isMedicalLeave} onChange={handleVvkChange} />
+                  <span className="text-sm font-bold">Отпуск по болезни (Г)</span>
+                </label>
+              </div>
+              
+              {!vvkConclusion.isMedicalLeave ? (
+                <div className="input-group mb-0">
+                  <label className="input-label">Итоговая категория</label>
+                  <select name="finalCategory" className="input-field" value={vvkConclusion.finalCategory} onChange={handleVvkChange} required={vvkConclusion.status === 'COMPLETED' && !vvkConclusion.isMedicalLeave}>
+                    <option value="">Не выбрано (ожидает завершения)</option>
+                    <option value="А">А</option><option value="А-1">А-1</option><option value="А-2">А-2</option><option value="А-3">А-3</option><option value="А-4">А-4</option>
+                    <option value="Б-1">Б-1</option><option value="Б-2">Б-2</option><option value="Б-3">Б-3</option><option value="Б-4">Б-4</option>
+                    <option value="В">В</option><option value="Г">Г</option><option value="Д">Д</option>
+                  </select>
+                </div>
+              ) : (
+                <div className="input-group mb-0">
+                  <label className="input-label">Количество суток отпуска</label>
+                  <input type="number" name="medicalLeaveDays" className="input-field" value={vvkConclusion.medicalLeaveDays} onChange={handleVvkChange} min="1" max="365" required={vvkConclusion.status === 'COMPLETED' && vvkConclusion.isMedicalLeave} placeholder="Например: 15" />
+                </div>
+              )}
+            </div>
+
+            {isEditing && (
+              <div className="mt-4 pt-4 border-t">
+                <h4 className="text-md font-bold mb-3">Скан заключения ВВК</h4>
+                {vvkDocument ? (
+                  <div className="flex justify-between items-center p-3" style={{ background: '#f0fdf4', borderRadius: 'var(--radius-sm)', border: '1px solid #bbf7d0' }}>
+                    <div className="flex items-center gap-3">
+                      <FileText size={20} className="text-secondary" />
+                      <div className="flex-col">
+                        <span style={{ fontWeight: 600, color: '#166534' }}>{vvkDocument.originalName}</span>
+                        <span className="text-xs text-muted">Загружен: {new Date(vvkDocument.createdAt).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <a href={api.getDocumentUrl(vvkDocument.id)} className="btn btn-icon btn-outline" target="_blank" rel="noopener noreferrer">
+                        <Download size={16} />
+                      </a>
+                      <button type="button" className="btn btn-icon btn-danger" onClick={() => handleDeleteDocument(vvkDocument.id)}>
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <input type="file" id="vvk-file-upload" style={{ display: 'none' }} onChange={handleVvkFileUpload} disabled={uploadingVvk}/>
+                    <label htmlFor="vvk-file-upload" className="btn btn-outline" style={{ display: 'inline-flex', cursor: 'pointer', borderColor: 'var(--secondary)', color: 'var(--secondary)' }}>
+                      <Upload size={16} /> {uploadingVvk ? 'Загрузка...' : 'Загрузить скан (PDF/Изображение)'}
+                    </label>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Files Section */}
         <div className="card p-4 mb-4">

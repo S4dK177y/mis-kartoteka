@@ -8,7 +8,8 @@ exports.getAll = async (req, res) => {
         documents: {
           include: { uploader: { select: { username: true } } },
           orderBy: { createdAt: 'desc' }
-        }
+        },
+        vvkConclusion: true
       },
       orderBy: { consultationDate: 'desc' } 
     });
@@ -26,7 +27,8 @@ exports.getById = async (req, res) => {
         documents: {
           include: { uploader: { select: { username: true } } },
           orderBy: { createdAt: 'desc' }
-        }
+        },
+        vvkConclusion: true
       }
     });
 
@@ -67,7 +69,7 @@ exports.create = async (req, res) => {
     const {
       personId, tokenNumber, rank, militaryUnit, militaryStatus, isSvoParticipant,
       fullName, birthDate, address, phoneNumber, relativeRelation, relativeFullName, relativePhone, relativeAddress,
-      diagnosis, consultationDate, nextConsultationDate, notes
+      diagnosis, consultationDate, nextConsultationDate, notes, type, vvkConclusion
     } = req.body;
 
     let finalPersonId = personId;
@@ -94,7 +96,21 @@ exports.create = async (req, res) => {
         personId: finalPersonId, tokenNumber, rank, militaryUnit, militaryStatus, isSvoParticipant: Boolean(isSvoParticipant),
         fullName, birthDate: birthDate ? new Date(birthDate) : undefined, address, phoneNumber, relativeRelation, relativeFullName, relativePhone, relativeAddress,
         diagnosis, consultationDate: consultationDate ? new Date(consultationDate) : new Date(), nextConsultationDate: nextConsultationDate ? new Date(nextConsultationDate) : null,
-        notes, doctorId: req.user.id
+        notes, doctorId: req.user.id, type: type || 'REGULAR',
+        ...(type === 'VVK' && vvkConclusion ? {
+          vvkConclusion: {
+            create: {
+              status: vvkConclusion.status || 'IN_PROGRESS',
+              neurologistCategory: vvkConclusion.neurologistCategory || null,
+              ophthalmologistCategory: vvkConclusion.ophthalmologistCategory || null,
+              dentistCategory: vvkConclusion.dentistCategory || null,
+              surgeonCategory: vvkConclusion.surgeonCategory || null,
+              therapistCategory: vvkConclusion.therapistCategory || null,
+              finalCategory: vvkConclusion.finalCategory || null,
+              medicalLeaveDays: vvkConclusion.medicalLeaveDays || null
+            }
+          }
+        } : {})
       }
     });
 
@@ -110,7 +126,7 @@ exports.update = async (req, res) => {
     const {
       tokenNumber, rank, militaryUnit, militaryStatus, isSvoParticipant,
       fullName, birthDate, address, phoneNumber, relativeRelation, relativeFullName, relativePhone, relativeAddress,
-      diagnosis, consultationDate, nextConsultationDate, notes
+      diagnosis, consultationDate, nextConsultationDate, notes, type, vvkConclusion
     } = req.body;
 
     const consult = await prisma.consultation.update({
@@ -118,7 +134,34 @@ exports.update = async (req, res) => {
       data: {
         tokenNumber, rank, militaryUnit, militaryStatus, isSvoParticipant: Boolean(isSvoParticipant),
         fullName, birthDate: birthDate ? new Date(birthDate) : undefined, address, phoneNumber, relativeRelation, relativeFullName, relativePhone, relativeAddress,
-        diagnosis, consultationDate: consultationDate ? new Date(consultationDate) : undefined, nextConsultationDate: nextConsultationDate ? new Date(nextConsultationDate) : null, notes
+        diagnosis, consultationDate: consultationDate ? new Date(consultationDate) : undefined, nextConsultationDate: nextConsultationDate ? new Date(nextConsultationDate) : null, notes,
+        type: type || 'REGULAR',
+        ...(type === 'VVK' && vvkConclusion ? {
+          vvkConclusion: {
+            upsert: {
+              create: {
+                status: vvkConclusion.status || 'IN_PROGRESS',
+                neurologistCategory: vvkConclusion.neurologistCategory || null,
+                ophthalmologistCategory: vvkConclusion.ophthalmologistCategory || null,
+                dentistCategory: vvkConclusion.dentistCategory || null,
+                surgeonCategory: vvkConclusion.surgeonCategory || null,
+                therapistCategory: vvkConclusion.therapistCategory || null,
+                finalCategory: vvkConclusion.finalCategory || null,
+                medicalLeaveDays: vvkConclusion.medicalLeaveDays || null
+              },
+              update: {
+                status: vvkConclusion.status || 'IN_PROGRESS',
+                neurologistCategory: vvkConclusion.neurologistCategory || null,
+                ophthalmologistCategory: vvkConclusion.ophthalmologistCategory || null,
+                dentistCategory: vvkConclusion.dentistCategory || null,
+                surgeonCategory: vvkConclusion.surgeonCategory || null,
+                therapistCategory: vvkConclusion.therapistCategory || null,
+                finalCategory: vvkConclusion.finalCategory || null,
+                medicalLeaveDays: vvkConclusion.medicalLeaveDays || null
+              }
+            }
+          }
+        } : {})
       }
     });
 

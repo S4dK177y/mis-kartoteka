@@ -17,22 +17,23 @@
 
   --bg-main: #f8fafc;
   --bg-card: rgba(255, 255, 255, 0.85);
-  --bg-input: #ffffff;
+  --bg-input: #f8fafc;
   
-  --text-main: #0f172a;
+  --text-main: #1e293b;
   --text-muted: #64748b;
   
   --border: #e2e8f0;
+  --border-focus: #3b82f6;
   --border-light: #f1f5f9;
   
   --radius-sm: 8px;
-  --radius-md: 16px;
-  --radius-lg: 24px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
   --radius-full: 9999px;
   
-  --shadow-sm: 0 2px 4px rgba(15, 23, 42, 0.04);
-  --shadow-md: 0 8px 16px rgba(15, 23, 42, 0.06);
-  --shadow-lg: 0 20px 40px rgba(15, 23, 42, 0.08);
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
   
   --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -341,24 +342,84 @@ body {
 
 .input-field {
   width: 100%;
-  padding: 0.5rem 0.75rem;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  border: 1.5px solid var(--border);
-  background: var(--bg-input);
+  font-size: 0.95rem;
   font-family: inherit;
-  font-size: 0.85rem;
   color: var(--text-main);
-  transition: var(--transition);
+  background-color: var(--bg-main);
+  transition: all 0.2s;
+  box-shadow: var(--shadow-sm);
 }
 
 .input-field:focus {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px var(--primary-light);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
 .input-field::placeholder {
   color: #94a3b8;
+}
+
+/* React Select Customization */
+.custom-select-container {
+  font-size: 0.95rem;
+  box-shadow: var(--shadow-sm);
+}
+.custom-select__control {
+  border-radius: var(--radius-sm) !important;
+  border-color: var(--border) !important;
+  min-height: 42px !important;
+  box-shadow: none !important;
+}
+.custom-select__control:hover {
+  border-color: var(--border-focus) !important;
+}
+.custom-select__control--is-focused {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
+}
+.custom-select__option--is-focused {
+  background-color: var(--primary-light) !important;
+  color: var(--primary) !important;
+}
+.custom-select__option--is-selected {
+  background-color: var(--primary) !important;
+  color: white !important;
+}
+.custom-select__menu {
+  border-radius: var(--radius-sm) !important;
+  box-shadow: var(--shadow-lg) !important;
+  overflow: hidden;
+  z-index: 50 !important;
+}
+
+/* React Datepicker Customization */
+.react-datepicker-wrapper {
+  width: 100%;
+}
+.react-datepicker {
+  font-family: 'Inter', sans-serif !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: var(--shadow-lg) !important;
+}
+.react-datepicker__header {
+  background-color: var(--bg-main) !important;
+  border-bottom: 1px solid var(--border) !important;
+  border-top-left-radius: var(--radius-md) !important;
+  border-top-right-radius: var(--radius-md) !important;
+  padding-top: 12px !important;
+}
+.react-datepicker__day--selected, .react-datepicker__day--keyboard-selected {
+  background-color: var(--primary) !important;
+  border-radius: 50% !important;
+  color: white !important;
+}
+.react-datepicker__day:hover {
+  border-radius: 50% !important;
 }
 
 select.input-field {

@@ -7,6 +7,7 @@ import PatientForm from './pages/PatientForm';
 import PatientProfile from './pages/PatientProfile';
 import ConsultationList from './pages/ConsultationList';
 import ConsultationForm from './pages/ConsultationForm';
+import ConsultationProfile from './pages/ConsultationProfile';
 import PersonList from './pages/PersonList';
 import PersonProfile from './pages/PersonProfile';
 import Login from './pages/Login';
@@ -99,6 +100,7 @@ const AppRoutes = () => {
           <Route path="/patients/:id/edit" element={<ProtectedRoute><PatientForm /></ProtectedRoute>} />
           
           <Route path="/consultations/new" element={<ProtectedRoute><ConsultationForm /></ProtectedRoute>} />
+          <Route path="/consultations/:id" element={<ProtectedRoute><ConsultationProfile /></ProtectedRoute>} />
           <Route path="/consultations/:id/edit" element={<ProtectedRoute><ConsultationForm /></ProtectedRoute>} />
           
           <Route path="*" element={<ProtectedRoute><PatientList /></ProtectedRoute>} />

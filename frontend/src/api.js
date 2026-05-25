@@ -182,6 +182,17 @@ export const api = {
     if (!res.ok) throw new Error('Failed to upload document');
     return res.json();
   },
+
+  uploadConsultationVvkDocument: async (consultationId, file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetchWithAuth(`${API_URL}/consultations/${consultationId}/vvk-document`, {
+      method: 'POST',
+      body: formData
+    });
+    if (!res.ok) throw new Error('Failed to upload VVK document');
+    return res.json();
+  },
   
   deleteDocument: async (id) => {
     const res = await fetchWithAuth(`${API_URL}/documents/${id}`, { method: 'DELETE' });

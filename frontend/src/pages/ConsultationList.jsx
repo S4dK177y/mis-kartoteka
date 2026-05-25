@@ -10,6 +10,7 @@ export default function ConsultationList() {
 
   // Filters
   const [search, setSearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState('ALL'); // ALL, REGULAR, VVK
   
   // Sorting
   const [sortField, setSortField] = useState('consultationDate'); 
@@ -48,6 +49,7 @@ export default function ConsultationList() {
     let result = consultations.filter(c => {
       const searchStr = search.toLowerCase();
       if (searchStr && !c.fullName.toLowerCase().includes(searchStr)) return false;
+      if (typeFilter !== 'ALL' && c.type !== typeFilter) return false;
       return true;
     });
 
@@ -88,6 +90,13 @@ export default function ConsultationList() {
             />
           </div>
         </div>
+        <div>
+          <select className="input-field" style={{ marginBottom: 0, minWidth: '150px' }} value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
+            <option value="ALL">Все приемы</option>
+            <option value="REGULAR">Обычные</option>
+            <option value="VVK">ВВК</option>
+          </select>
+        </div>
       </div>
 
       <div className="card table-wrapper" style={{ flex: 1 }}>
@@ -107,7 +116,8 @@ export default function ConsultationList() {
                   </div>
                 </th>
                 <th>Служба</th>
-                <th>Диагноз</th>
+                <th>Тип</th>
+                <th>Диагноз / Заключение</th>
                 <th>
                   <div className="flex-col gap-1">
                     <span className="flex items-center gap-1 cursor-pointer select-none hover:text-primary" onClick={() => handleSort('consultationDate')}>
@@ -126,7 +136,7 @@ export default function ConsultationList() {
             </thead>
             <tbody>
               {filteredConsultations.map(consult => (
-                <tr key={consult.id} onClick={() => navigate(`/consultations/${consult.id}/edit`)} style={{ cursor: 'pointer' }}>
+                <tr key={consult.id} onClick={() => navigate(`/consultations/${consult.id}`)} style={{ cursor: 'pointer' }}>
                   <td style={{ fontWeight: 600, color: 'var(--primary-hover)' }}>
                     <span>{consult.fullName}</span>
                     {(consult.rank || consult.militaryUnit) && (
@@ -150,7 +160,30 @@ export default function ConsultationList() {
                       )}
                     </div>
                   </td>
-                  <td style={{ fontSize: '0.75rem' }}>{consult.diagnosis || '—'}</td>
+                  <td>
+                    {consult.type === 'VVK' ? (
+                      consult.vvkConclusion?.status === 'COMPLETED' ? (
+                        <span className="badge" style={{ background: '#e0e7ff', color: '#4f46e5', fontSize: '0.65rem' }}>ВВК (Завершено)</span>
+                      ) : (
+                        <span className="badge" style={{ background: '#fef3c7', color: '#d97706', fontSize: '0.65rem' }}>ВВК (В процессе)</span>
+                      )
+                    ) : (
+                      <span className="text-muted" style={{ fontSize: '0.75rem' }}>Обычный</span>
+                    )}
+                  </td>
+                  <td style={{ fontSize: '0.75rem' }}>
+                    <div style={{ maxWidth: '250px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={consult.diagnosis || 'Нет диагноза'}>
+                      {consult.diagnosis || '—'}
+                    </div>
+                    {consult.type === 'VVK' && consult.vvkConclusion && (
+                      <div className="mt-1" style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--secondary)' }}>
+                        {consult.vvkConclusion.medicalLeaveDays 
+                          ? `Отпуск по болезни (${consult.vvkConclusion.medicalLeaveDays} сут.)`
+                          : `Категория: ${consult.vvkConclusion.finalCategory || '—'}`
+                        }
+                      </div>
+                    )}
+                  </td>
                   <td className="text-muted" style={{ fontSize: '0.75rem' }}>
                     {new Date(consult.consultationDate).toLocaleDateString('ru-RU')}
                     <br/>

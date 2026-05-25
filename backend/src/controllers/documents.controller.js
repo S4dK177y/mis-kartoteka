@@ -41,6 +41,43 @@ exports.upload = async (req, res) => {
   }
 };
 
+exports.uploadVvk = async (req, res) => {
+  try {
+    const file = req.file;
+    if (!file) return res.status(400).json({ error: 'No file uploaded' });
+
+    const consultationId = req.params.consultationId;
+    const consultation = await prisma.consultation.findUnique({ where: { id: consultationId }, include: { vvkConclusion: true }});
+    if (!consultation || consultation.type !== 'VVK') {
+      return res.status(400).json({ error: 'Not a VVK consultation' });
+    }
+
+    const document = await prisma.document.create({
+      data: {
+        filename: file.filename,
+        originalName: file.originalname,
+        mimeType: file.mimetype,
+        size: file.size,
+        consultationId: consultationId,
+        personId: consultation.personId,
+        uploadedById: req.user.id
+      }
+    });
+
+    if (consultation.vvkConclusion) {
+      await prisma.vvkConclusion.update({
+        where: { id: consultation.vvkConclusion.id },
+        data: { documentId: document.id }
+      });
+    }
+
+    await logAction(req.user.id, 'UPLOAD', 'Document VVK', document.id, { originalName: file.originalname, consultationId });
+    res.status(201).json(document);
+  } catch (error) {
+    res.status(500).json({ error: 'Internal Server Error', details: error.message });
+  }
+};
+
 exports.download = async (req, res) => {
   try {
     const token = req.cookies.token || req.query.token;

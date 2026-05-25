@@ -663,9 +663,28 @@ export default function PatientProfile() {
                         {new Date(consult.consultationDate).toLocaleDateString('ru-RU')}
                       </td>
                       <td style={{ padding: '10px' }}>
+                        <div className="flex items-center gap-2 mb-1">
+                          {consult.type === 'VVK' ? (
+                            consult.vvkConclusion?.status === 'COMPLETED' ? (
+                              <span className="badge" style={{ background: '#e0e7ff', color: '#4f46e5', fontSize: '0.65rem' }}>ВВК (Завершено)</span>
+                            ) : (
+                              <span className="badge" style={{ background: '#fef3c7', color: '#d97706', fontSize: '0.65rem' }}>ВВК (В процессе)</span>
+                            )
+                          ) : (
+                            <span className="badge" style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', color: 'var(--text-muted)', fontSize: '0.65rem' }}>Обычный</span>
+                          )}
+                        </div>
                         <div style={{ maxWidth: '400px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={consult.diagnosis || 'Нет диагноза'}>
                           {consult.diagnosis || <span className="text-muted">Нет диагноза</span>}
                         </div>
+                        {consult.type === 'VVK' && consult.vvkConclusion && (
+                          <div className="mt-1" style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--secondary)' }}>
+                            {consult.vvkConclusion.medicalLeaveDays 
+                              ? `Отпуск по болезни (${consult.vvkConclusion.medicalLeaveDays} сут.)`
+                              : `Категория: ${consult.vvkConclusion.finalCategory || '—'}`
+                            }
+                          </div>
+                        )}
                       </td>
                       <td style={{ padding: '10px' }}>
                         {consult.nextConsultationDate ? new Date(consult.nextConsultationDate).toLocaleDateString('ru-RU') : '—'}
