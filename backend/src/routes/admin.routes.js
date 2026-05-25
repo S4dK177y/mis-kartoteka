@@ -3,16 +3,14 @@ const router = express.Router();
 const adminController = require('../controllers/admin.controller');
 const { authenticateToken, requireAdmin } = require('../middlewares/auth');
 
-router.use(authenticateToken, requireAdmin);
+router.get('/users', authenticateToken, requireAdmin, adminController.getUsers);
+router.post('/users', authenticateToken, requireAdmin, adminController.createUser);
+router.put('/users/:id/role', authenticateToken, requireAdmin, adminController.updateUserRole);
 
-router.get('/users', adminController.getUsers);
-router.post('/users', adminController.createUser);
-router.put('/users/:id/role', adminController.updateUserRole);
+router.get('/logs', authenticateToken, requireAdmin, adminController.getLogs);
+router.get('/logs/stats', authenticateToken, requireAdmin, adminController.getLogStats);
 
-router.get('/logs', adminController.getLogs);
-router.get('/logs/stats', adminController.getLogStats);
-
-router.get('/settings', adminController.getSettings);
-router.put('/settings', adminController.updateSettings);
+router.get('/settings', authenticateToken, requireAdmin, adminController.getSettings);
+router.put('/settings', authenticateToken, requireAdmin, adminController.updateSettings);
 
 module.exports = router;
