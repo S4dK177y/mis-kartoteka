@@ -50,6 +50,13 @@ const FIELD_LABELS = {
   username:            'Логин',
   role:                'Роль',
   newRole:             'Новая роль',
+  from:                'Из',
+  to:                  'В',
+  previousDepartment:  'Предыдущее отделение',
+  newDepartment:       'Новое отделение',
+  originalName:        'Имя файла',
+  size:                'Размер',
+  mimetype:            'Тип файла'
 };
 
 const formatFieldValue = (key, val) => {
@@ -255,8 +262,10 @@ const AdminPanel = () => {
   const [logStats, setLogStats] = useState({ totalLogs: 0, exactBytes: 0 });
   const [settings, setSettings] = useState({ logRetentionDays: '30', maxLogSpaceMb: '50' });
   const [settingsLoading, setSettingsLoading] = useState(false);
-  const [logFilter, setLogFilter] = useState('');
+  const [logDateFilter, setLogDateFilter] = useState('');
+  const [logUserFilter, setLogUserFilter] = useState('');
   const [logActionFilter, setLogActionFilter] = useState('');
+  const [logEntityFilter, setLogEntityFilter] = useState('');
 
   const fetchUsers = useCallback(async () => {
     const data = await api.getUsers();
@@ -333,11 +342,21 @@ const AdminPanel = () => {
     }
   };
 
+  const uniqueUsers = Array.from(new Set(logs.map(l => l.user?.username || 'Система'))).sort();
+  const uniqueEntities = Array.from(new Set(logs.map(l => l.entity))).sort();
+
   const filteredLogs = logs.filter(log => {
     const matchAction = !logActionFilter || log.action === logActionFilter;
-    const matchText = !logFilter || (log.user?.username || '').toLowerCase().includes(logFilter.toLowerCase())
-      || (log.entity || '').toLowerCase().includes(logFilter.toLowerCase());
-    return matchAction && matchText;
+    const matchUser = !logUserFilter || (log.user?.username || 'Система') === logUserFilter;
+    const matchEntity = !logEntityFilter || log.entity === logEntityFilter;
+    
+    let matchDate = true;
+    if (logDateFilter) {
+      const logDate = new Date(log.createdAt).toISOString().split('T')[0];
+      matchDate = logDate === logDateFilter;
+    }
+    
+    return matchAction && matchUser && matchEntity && matchDate;
   });
 
   const TAB_BTN = (id, label, Icon) => (
@@ -622,17 +641,27 @@ const AdminPanel = () => {
                 <thead>
                   <tr style={{ borderBottom: '2px solid var(--border)', position: 'sticky', top: 0, background: 'white', zIndex: 1 }}>
                     <th style={{ width: '46px' }} />
-                    <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Время</th>
-                    <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left' }}>
-                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }}>Пользователь</div>
+                    <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', minWidth: '120px' }}>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }}>Время</div>
                       <input
-                        type="text"
-                        placeholder="Фильтр..."
-                        value={logFilter}
-                        onChange={e => setLogFilter(e.target.value)}
+                        type="date"
+                        value={logDateFilter}
+                        onChange={e => setLogDateFilter(e.target.value)}
                         onClick={e => e.stopPropagation()}
                         style={{ fontSize: '0.75rem', padding: '0.2rem 0.4rem', border: '1px solid var(--border)', borderRadius: '4px', width: '100%', outline: 'none', background: 'var(--bg-input)' }}
                       />
+                    </th>
+                    <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left' }}>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }}>Пользователь</div>
+                      <select
+                        value={logUserFilter}
+                        onChange={e => setLogUserFilter(e.target.value)}
+                        onClick={e => e.stopPropagation()}
+                        style={{ fontSize: '0.75rem', padding: '0.2rem 0.4rem', border: '1px solid var(--border)', borderRadius: '4px', width: '100%', outline: 'none', background: 'var(--bg-input)' }}
+                      >
+                        <option value="">Все</option>
+                        {uniqueUsers.map(u => <option key={u} value={u}>{u}</option>)}
+                      </select>
                     </th>
                     <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left' }}>
                       <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }}>Действие</div>
@@ -648,7 +677,18 @@ const AdminPanel = () => {
                         ))}
                       </select>
                     </th>
-                    <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Объект</th>
+                    <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left' }}>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }}>Объект</div>
+                      <select
+                        value={logEntityFilter}
+                        onChange={e => setLogEntityFilter(e.target.value)}
+                        onClick={e => e.stopPropagation()}
+                        style={{ fontSize: '0.75rem', padding: '0.2rem 0.4rem', border: '1px solid var(--border)', borderRadius: '4px', width: '100%', outline: 'none', background: 'var(--bg-input)' }}
+                      >
+                        <option value="">Все</option>
+                        {uniqueEntities.map(e => <option key={e} value={e}>{ENTITY_LABELS[e] || e}</option>)}
+                      </select>
+                    </th>
                     <th style={{ width: '36px' }} />
                   </tr>
                 </thead>
