@@ -20,10 +20,12 @@ const ACTION_META = {
 };
 
 const ENTITY_LABELS = {
-  Patient:      'Пациент',
-  Consultation: 'Консультация',
-  User:         'Пользователь',
-  Document:     'Документ',
+  Patient:        'Пациент',
+  Consultation:   'Консультация',
+  User:           'Пользователь',
+  Document:       'Документ',
+  'Document VVK': 'Документ ВВК',
+  Settings:       'Настройки',
 };
 
 const FIELD_LABELS = {
@@ -80,21 +82,45 @@ const Badge = ({ action }) => {
   );
 };
 
-const LogDetails = ({ detailsStr }) => {
-  if (!detailsStr) return <span className="text-muted" style={{ fontSize: '0.8rem' }}>Детали отсутствуют</span>;
+// UUID pattern
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Keys that are UUIDs or internal IDs — hide from display
+const HIDDEN_KEYS = new Set(['entityId', 'consultationId', 'patientId', 'personId', 'documentId']);
+
+// Keys that represent numeric counts (migration stats)
+const COUNT_KEYS = {
+  patientsMigrated:      'Пациентов',
+  consultationsMigrated: 'Консультаций',
+  usersMigrated:         'Пользователей',
+  documentsMigrated:     'Документов',
+  vvkConclusionsMigrated:'Заключений ВВК',
+};
+
+const LogDetails = ({ detailsStr, action, entity }) => {
+  if (!detailsStr) {
+    // Explain why no details rather than generic message
+    if (action === 'DELETE') return <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Запись удалена из базы данных.</span>;
+    if (action === 'LOGOUT') return <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Сессия завершена.</span>;
+    return <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Подробная информация не записана.</span>;
+  }
+
   try {
     const d = JSON.parse(detailsStr);
-    if (d.changes && typeof d.changes === 'object') {
+
+    // --- 1. CHANGES diff (update operations) ---
+    if (d.changes && typeof d.changes === 'object' && Object.keys(d.changes).length > 0) {
       return (
         <div className="flex-col gap-2">
+          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>Изменённые поля</span>
           {Object.entries(d.changes).map(([field, vals]) => (
-            <div key={field} style={{ display: 'grid', gridTemplateColumns: '160px 1fr 18px 1fr', gap: '0.4rem', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600 }}>{FIELD_LABELS[field] || field}</span>
-              <span style={{ background: '#fee2e2', color: '#991b1b', padding: '0.15rem 0.45rem', borderRadius: '5px', fontSize: '0.78rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <div key={field} style={{ display: 'grid', gridTemplateColumns: '170px 1fr 20px 1fr', gap: '0.4rem', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600 }}>{FIELD_LABELS[field] || field}</span>
+              <span style={{ background: '#fee2e2', color: '#991b1b', padding: '0.2rem 0.5rem', borderRadius: '5px', fontSize: '0.79rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {formatFieldValue(field, vals?.old)}
               </span>
-              <span style={{ color: 'var(--text-muted)', textAlign: 'center', fontSize: '0.8rem' }}>→</span>
-              <span style={{ background: '#dcfce7', color: '#166534', padding: '0.15rem 0.45rem', borderRadius: '5px', fontSize: '0.78rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <span style={{ color: 'var(--text-muted)', textAlign: 'center', fontSize: '0.85rem' }}>→</span>
+              <span style={{ background: '#dcfce7', color: '#166534', padding: '0.2rem 0.5rem', borderRadius: '5px', fontSize: '0.79rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {formatFieldValue(field, vals?.new)}
               </span>
             </div>
@@ -102,21 +128,59 @@ const LogDetails = ({ detailsStr }) => {
         </div>
       );
     }
-    // Flat key/value display
-    const filtered = Object.entries(d).filter(([k]) => k !== 'note');
-    if (filtered.length === 0) return <span className="text-muted" style={{ fontSize: '0.8rem' }}>Без деталей</span>;
-    return (
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-        {filtered.map(([k, v]) => (
-          <span key={k} style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: '6px', padding: '0.15rem 0.5rem', fontSize: '0.78rem' }}>
-            <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>{FIELD_LABELS[k] || k}: </span>
-            <span style={{ fontWeight: 500 }}>{formatFieldValue(k, v)}</span>
+
+    // --- 2. MIGRATION stats ---
+    const countEntries = Object.entries(d).filter(([k]) => k in COUNT_KEYS);
+    if (countEntries.length > 0) {
+      return (
+        <div className="flex-col gap-1">
+          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>Результаты миграции</span>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+            {countEntries.map(([k, v]) => (
+              <span key={k} style={{ background: '#dbeafe', color: '#1e3a8a', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '0.2rem 0.6rem', fontSize: '0.8rem', fontWeight: 600 }}>
+                {COUNT_KEYS[k]}: {v}
+              </span>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    // --- 3. DOCUMENT upload/delete ---
+    if (d.originalName) {
+      const isUpload = action === 'UPLOAD';
+      return (
+        <div className="flex-col gap-1">
+          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            {isUpload ? 'Загруженный файл' : 'Удалённый файл'}
           </span>
+          <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)', background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: '6px', padding: '0.3rem 0.6rem', display: 'inline-block' }}>
+            {d.originalName}
+          </span>
+        </div>
+      );
+    }
+
+    // --- 4. Generic flat fields (creation details, login, etc.) ---
+    const visible = Object.entries(d).filter(([k, v]) =>
+      !HIDDEN_KEYS.has(k)
+      && k !== 'note'
+      && !(typeof v === 'string' && UUID_RE.test(v))
+      && v !== null && v !== undefined
+    );
+    if (visible.length === 0) return <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Подробная информация не записана.</span>;
+    return (
+      <div className="flex-col gap-1">
+        {visible.map(([k, v]) => (
+          <div key={k} className="flex items-center gap-2">
+            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600, minWidth: '120px' }}>{FIELD_LABELS[k] || k}</span>
+            <span style={{ fontSize: '0.83rem', fontWeight: 500, color: 'var(--text-main)' }}>{formatFieldValue(k, v)}</span>
+          </div>
         ))}
       </div>
     );
   } catch {
-    return <span style={{ fontSize: '0.8rem' }}>{detailsStr}</span>;
+    return <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{detailsStr}</span>;
   }
 };
 
@@ -129,38 +193,25 @@ const LogRow = ({ log }) => {
     <>
       <tr
         onClick={() => setExpanded(e => !e)}
-        style={{ cursor: 'pointer', borderBottom: expanded ? 'none' : '1px solid var(--border)' }}
-        className="hover:bg-surface-hover"
+        style={{ cursor: 'pointer', borderBottom: expanded ? 'none' : '1px solid var(--border)', transition: 'background 0.15s' }}
       >
-        <td style={{ padding: '0.75rem 1rem', width: '36px' }}>
-          <div style={{
-            width: '30px', height: '30px', borderRadius: '8px',
-            background: meta.bg || '#f3f4f6',
-            display: 'flex', alignItems: 'center', justifyContent: 'center'
-          }}>
-            <Icon size={14} color={meta.color || '#374151'} />
+        <td style={{ padding: '0.75rem 1rem', width: '46px' }}>
+          <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: meta.bg || '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Icon size={15} color={meta.color || '#374151'} />
           </div>
         </td>
-        <td style={{ padding: '0.75rem 0.5rem', whiteSpace: 'nowrap' }}>
-          <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-main)' }}>
-            {new Date(log.createdAt).toLocaleDateString('ru-RU')}
-          </div>
-          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-            {new Date(log.createdAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-          </div>
+        <td style={{ padding: '0.75rem 0.75rem', whiteSpace: 'nowrap' }}>
+          <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-main)' }}>{new Date(log.createdAt).toLocaleDateString('ru-RU')}</div>
+          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '1px' }}>{new Date(log.createdAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
         </td>
-        <td style={{ padding: '0.75rem 0.5rem' }}>
-          <span style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--primary)' }}>
-            {log.user?.username || 'Система'}
-          </span>
+        <td style={{ padding: '0.75rem 0.75rem' }}>
+          <span style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--primary)' }}>{log.user?.username || 'Система'}</span>
         </td>
-        <td style={{ padding: '0.75rem 0.5rem' }}>
+        <td style={{ padding: '0.75rem 0.75rem' }}>
           <Badge action={log.action} />
         </td>
-        <td style={{ padding: '0.75rem 0.5rem' }}>
-          <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-            {ENTITY_LABELS[log.entity] || log.entity}
-          </span>
+        <td style={{ padding: '0.75rem 0.75rem' }}>
+          <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{ENTITY_LABELS[log.entity] || log.entity}</span>
         </td>
         <td style={{ padding: '0.75rem 1rem', textAlign: 'right', color: 'var(--text-muted)' }}>
           {expanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
@@ -168,8 +219,8 @@ const LogRow = ({ log }) => {
       </tr>
       {expanded && (
         <tr style={{ borderBottom: '1px solid var(--border)' }}>
-          <td colSpan={6} style={{ padding: '0 1rem 1rem 1rem', background: 'var(--bg-input)' }}>
-            <LogDetails detailsStr={log.details} />
+          <td colSpan={6} style={{ padding: '1rem 1.25rem 1rem 4.5rem', background: 'var(--bg-input)' }}>
+            <LogDetails detailsStr={log.details} action={log.action} entity={log.entity} />
           </td>
         </tr>
       )}
@@ -316,7 +367,7 @@ const AdminPanel = () => {
 
       {/* ======== USERS TAB ======== */}
       {activeTab === 'users' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '340px 1fr', gap: '1.5rem', alignItems: 'start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'min(340px, 100%) 1fr', gap: '1.5rem', alignItems: 'start' }} className="users-grid">
           {/* Create user form */}
           <div className="card p-6">
             <h3 className="font-bold text-lg mb-5 flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
@@ -351,7 +402,7 @@ const AdminPanel = () => {
 
           {/* Users list */}
           <div className="card" style={{ overflow: 'hidden' }}>
-            <div className="p-5 border-b" style={{ background: 'var(--bg-input)' }}>
+            <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border)', background: 'var(--bg-input)' }}>
               <h3 className="font-bold text-lg m-0" style={{ color: 'var(--text-main)' }}>Список пользователей</h3>
             </div>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -416,82 +467,93 @@ const AdminPanel = () => {
 
       {/* ======== SECURITY TAB ======== */}
       {activeTab === 'security' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', alignItems: 'start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'min(420px, 100%) 1fr', gap: '1.5rem', alignItems: 'start' }}
+          className="security-grid">
           {/* Change master password */}
-          <div className="card p-6">
-            <h3 className="font-bold text-lg mb-2 flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
-              <Key size={18} /> Смена Мастер-пароля
-            </h3>
-            <p className="text-sm text-muted mb-5" style={{ lineHeight: 1.6 }}>
-              Используется алгоритм конвертного шифрования (Envelope Encryption). Все данные базы при этом остаются нетронутыми — меняется только ключ доступа к ключу шифрования.
-            </p>
-            {cpMessage && (
-              <div className="mb-4 p-3 text-sm" style={{
-                background: cpMessage.type === 'success' ? '#dcfce7' : 'var(--danger-light)',
-                color: cpMessage.type === 'success' ? '#166534' : 'var(--danger)',
-                borderRadius: 'var(--radius-sm)',
-                border: `1px solid ${cpMessage.type === 'success' ? '#86efac' : 'var(--danger)'}`,
-                lineHeight: 1.5
-              }}>
-                {cpMessage.text}
-              </div>
-            )}
-            <form onSubmit={handleChangeMasterPassword} className="flex-col gap-4">
-              <div className="input-group">
-                <label className="input-label">Текущий мастер-пароль</label>
-                <input type="password" className="input-field" value={oldMasterPassword} onChange={e => setOldMasterPassword(e.target.value)} required placeholder="••••••••" autoComplete="current-password" />
-              </div>
-              <div className="input-group">
-                <label className="input-label">Новый мастер-пароль</label>
-                <input type="password" className="input-field" value={newMasterPassword} onChange={e => setNewMasterPassword(e.target.value)} required placeholder="Минимум 6 символов" autoComplete="new-password" />
-              </div>
-              <div className="input-group">
-                <label className="input-label">Повторите новый пароль</label>
-                <input type="password" className="input-field" value={confirmNewMasterPassword} onChange={e => setConfirmNewMasterPassword(e.target.value)} required placeholder="Повторите новый пароль" autoComplete="new-password" />
-              </div>
-              <button type="submit" className="btn btn-primary w-full" style={{ padding: '0.7rem', background: 'var(--danger)', borderColor: 'var(--danger)' }} disabled={cpLoading}>
-                {cpLoading ? 'Применение...' : 'Изменить мастер-пароль'}
-              </button>
-            </form>
+          <div className="card" style={{ overflow: 'hidden' }}>
+            <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border)', background: 'var(--bg-input)' }}>
+              <h3 className="font-bold text-base m-0 flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
+                <Key size={18} style={{ color: 'var(--primary)' }} /> Смена Мастер-пароля
+              </h3>
+              <p className="text-sm text-muted m-0 mt-1" style={{ lineHeight: 1.55 }}>
+                Все данные остаются нетронутыми — меняется только ключ доступа к ключу шифрования (Envelope Encryption).
+              </p>
+            </div>
+            <div style={{ padding: '1.5rem 1.25rem' }}>
+              {cpMessage && (
+                <div className="mb-5 p-3 text-sm" style={{
+                  background: cpMessage.type === 'success' ? '#dcfce7' : 'var(--danger-light)',
+                  color: cpMessage.type === 'success' ? '#166534' : 'var(--danger)',
+                  borderRadius: 'var(--radius-sm)',
+                  border: `1px solid ${cpMessage.type === 'success' ? '#86efac' : 'var(--danger)'}`,
+                  lineHeight: 1.5
+                }}>
+                  {cpMessage.text}
+                </div>
+              )}
+              <form onSubmit={handleChangeMasterPassword} className="flex-col gap-4">
+                <div className="input-group">
+                  <label className="input-label">Текущий мастер-пароль</label>
+                  <input type="password" className="input-field" value={oldMasterPassword} onChange={e => setOldMasterPassword(e.target.value)} required placeholder="••••••••" autoComplete="current-password" />
+                </div>
+                <div className="input-group">
+                  <label className="input-label">Новый мастер-пароль</label>
+                  <input type="password" className="input-field" value={newMasterPassword} onChange={e => setNewMasterPassword(e.target.value)} required placeholder="Минимум 6 символов" autoComplete="new-password" />
+                </div>
+                <div className="input-group">
+                  <label className="input-label">Повторите новый пароль</label>
+                  <input type="password" className="input-field" value={confirmNewMasterPassword} onChange={e => setConfirmNewMasterPassword(e.target.value)} required placeholder="Повторите новый пароль" autoComplete="new-password" />
+                </div>
+                <button type="submit" className="btn btn-primary w-full" style={{ padding: '0.7rem', background: 'var(--danger)', borderColor: 'var(--danger)' }} disabled={cpLoading}>
+                  {cpLoading ? 'Применение...' : 'Изменить мастер-пароль'}
+                </button>
+              </form>
+            </div>
           </div>
 
-          {/* Encryption info */}
+          {/* Encryption info cards */}
           <div className="flex-col gap-4">
-            <div className="card p-5" style={{ border: '1px solid #bfdbfe', background: '#eff6ff' }}>
-              <h4 className="font-bold text-sm mb-3 flex items-center gap-2" style={{ color: '#1e3a8a' }}>
-                <Shield size={16} /> О системе шифрования
-              </h4>
-              <div className="flex-col gap-2">
+            <div className="card" style={{ overflow: 'hidden', border: '1px solid #bfdbfe' }}>
+              <div style={{ padding: '0.85rem 1.25rem', borderBottom: '1px solid #bfdbfe', background: '#eff6ff' }}>
+                <h4 className="font-bold text-base m-0 flex items-center gap-2" style={{ color: '#1e3a8a' }}>
+                  <Shield size={17} style={{ color: '#3b82f6' }} /> О системе шифрования
+                </h4>
+              </div>
+              <div style={{ padding: '1rem 1.25rem', background: '#eff6ff' }} className="flex-col gap-0">
                 {[
-                  ['Алгоритм', 'AES-256-GCM'],
-                  ['Производная ключа', 'PBKDF2 (100 000 итераций)'],
-                  ['Детерминированное шифрование', 'HMAC-SHA256 IV'],
-                  ['Шифрование ключа (KEK)', 'Envelope Encryption'],
-                  ['Ключ в памяти', 'RAM only — не сохраняется на диске'],
+                  ['Алгоритм шифрования',         'AES-256-GCM'],
+                  ['Производная ключа',            'PBKDF2 · 100 000 итераций · SHA-256'],
+                  ['Случайный IV',                 'AES-256-GCM · 12 байт'],
+                  ['Детерминированный IV',         'HMAC-SHA256 (для поиска по жетону)'],
+                  ['Шифрование ключа шифрования',  'Envelope Encryption (KEK → DEK)'],
+                  ['Хранение мастер-ключа',        'Только в RAM — никогда не пишется на диск'],
                 ].map(([k, v]) => (
-                  <div key={k} className="flex justify-between" style={{ borderBottom: '1px solid #bfdbfe', paddingBottom: '0.3rem' }}>
-                    <span style={{ fontSize: '0.8rem', color: '#3b82f6', fontWeight: 600 }}>{k}</span>
-                    <span style={{ fontSize: '0.8rem', color: '#1e3a8a', fontWeight: 700 }}>{v}</span>
+                  <div key={k} className="flex justify-between items-center" style={{ padding: '0.45rem 0', borderBottom: '1px solid #bfdbfe' }}>
+                    <span style={{ fontSize: '0.82rem', color: '#3b82f6', fontWeight: 600 }}>{k}</span>
+                    <span style={{ fontSize: '0.82rem', color: '#1e3a8a', fontWeight: 700, textAlign: 'right', marginLeft: '1rem' }}>{v}</span>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="card p-5" style={{ border: '1px solid #fde68a', background: '#fffbeb' }}>
-              <h4 className="font-bold text-sm mb-2 flex items-center gap-2" style={{ color: '#92400e' }}>
-                <AlertTriangle size={16} /> Важно знать
-              </h4>
-              <ul className="flex-col gap-1" style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+            <div className="card" style={{ overflow: 'hidden', border: '1px solid #fde68a' }}>
+              <div style={{ padding: '0.85rem 1.25rem', borderBottom: '1px solid #fde68a', background: '#fffbeb' }}>
+                <h4 className="font-bold text-base m-0 flex items-center gap-2" style={{ color: '#92400e' }}>
+                  <AlertTriangle size={17} style={{ color: '#f59e0b' }} /> Важно знать
+                </h4>
+              </div>
+              <div style={{ padding: '1rem 1.25rem', background: '#fffbeb' }} className="flex-col gap-3">
                 {[
-                  'Если мастер-пароль будет утерян — данные невозможно восстановить.',
-                  'При перезапуске сервера система блокируется и требует повторного ввода пароля.',
-                  'Принудительная блокировка доступна через иконку замка в шапке интерфейса.',
+                  'Если мастер-пароль будет утерян — данные невозможно восстановить. Надёжно сохраните его в менеджере паролей или физическом сейфе.',
+                  'При каждом перезапуске сервера система блокируется и требует повторного ввода мастер-пароля.',
+                  'Принудительная блокировка без перезапуска доступна через иконку замка в верхней части интерфейса.',
                 ].map((t, i) => (
-                  <li key={i} style={{ fontSize: '0.8rem', color: '#92400e', lineHeight: 1.5, paddingLeft: '0.5rem', borderLeft: '2px solid #fbbf24' }}>
-                    {t}
-                  </li>
+                  <div key={i} className="flex gap-3 items-start">
+                    <span style={{ fontWeight: 800, color: '#f59e0b', fontSize: '1rem', lineHeight: 1.4, flexShrink: 0 }}>{i + 1}.</span>
+                    <span style={{ fontSize: '0.83rem', color: '#92400e', lineHeight: 1.6 }}>{t}</span>
+                  </div>
                 ))}
-              </ul>
+              </div>
             </div>
           </div>
         </div>
@@ -499,33 +561,15 @@ const AdminPanel = () => {
 
       {/* ======== LOGS TAB ======== */}
       {activeTab === 'logs' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: '1.5rem', alignItems: 'start' }}>
-          {/* Sidebar */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'min(260px, 100%) 1fr', gap: '1.5rem', alignItems: 'start' }} className="logs-grid">
+          {/* Sidebar: settings + stats only */}
           <div className="flex-col gap-4">
-            {/* Filters */}
-            <div className="card p-5">
-              <h4 className="font-bold text-sm mb-4 uppercase tracking-wider text-muted">Фильтры</h4>
-              <div className="flex-col gap-3">
-                <div className="input-group mb-0">
-                  <label className="input-label">Пользователь / объект</label>
-                  <input type="text" className="input-field" placeholder="Поиск..." value={logFilter} onChange={e => setLogFilter(e.target.value)} />
-                </div>
-                <div className="input-group mb-0">
-                  <label className="input-label">Тип действия</label>
-                  <select className="input-field" value={logActionFilter} onChange={e => setLogActionFilter(e.target.value)}>
-                    <option value="">Все</option>
-                    {Object.entries(ACTION_META).map(([k, v]) => (
-                      <option key={k} value={k}>{v.label}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </div>
-
             {/* Log settings */}
-            <div className="card p-5">
-              <h4 className="font-bold text-sm mb-4 uppercase tracking-wider text-muted">Настройки логов</h4>
-              <div className="flex-col gap-3">
+            <div className="card" style={{ overflow: 'hidden' }}>
+              <div style={{ padding: '0.85rem 1.25rem', borderBottom: '1px solid var(--border)', background: 'var(--bg-input)' }}>
+                <h4 className="font-bold text-sm m-0 uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Настройки хранения</h4>
+              </div>
+              <div style={{ padding: '1rem 1.25rem' }} className="flex-col gap-3">
                 <div className="input-group mb-0">
                   <label className="input-label">Хранить логи (дней)</label>
                   <input type="number" className="input-field" value={settings.logRetentionDays} onChange={e => setSettings({ ...settings, logRetentionDays: e.target.value })} />
@@ -541,29 +585,33 @@ const AdminPanel = () => {
             </div>
 
             {/* Stats */}
-            <div className="card p-5">
-              <h4 className="font-bold text-sm mb-3 uppercase tracking-wider text-muted">Статистика</h4>
-              <div className="flex justify-between mb-2">
-                <span className="text-sm text-muted">Всего записей:</span>
-                <span className="font-bold">{logStats.totalLogs}</span>
+            <div className="card" style={{ overflow: 'hidden' }}>
+              <div style={{ padding: '0.85rem 1.25rem', borderBottom: '1px solid var(--border)', background: 'var(--bg-input)' }}>
+                <h4 className="font-bold text-sm m-0 uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Статистика</h4>
               </div>
-              <div className="flex justify-between mb-3">
-                <span className="text-sm text-muted">Объём:</span>
-                <span className="font-bold" style={{ color: 'var(--primary)' }}>{(logStats.exactBytes / 1024 / 1024).toFixed(2)} МБ</span>
-              </div>
-              <div style={{ background: 'var(--bg-input)', height: '6px', borderRadius: '3px', overflow: 'hidden' }}>
-                <div style={{
-                  background: 'var(--primary)', height: '100%',
-                  width: `${Math.min(100, (logStats.exactBytes / 1024 / 1024) / parseFloat(settings.maxLogSpaceMb) * 100)}%`,
-                  transition: 'width 0.3s ease'
-                }} />
+              <div style={{ padding: '1rem 1.25rem' }}>
+                <div className="flex justify-between mb-2">
+                  <span className="text-sm text-muted">Всего записей:</span>
+                  <span className="font-bold">{logStats.totalLogs}</span>
+                </div>
+                <div className="flex justify-between mb-3">
+                  <span className="text-sm text-muted">Объём:</span>
+                  <span className="font-bold" style={{ color: 'var(--primary)' }}>{(logStats.exactBytes / 1024 / 1024).toFixed(2)} МБ</span>
+                </div>
+                <div style={{ background: 'var(--border)', height: '6px', borderRadius: '3px', overflow: 'hidden' }}>
+                  <div style={{
+                    background: 'var(--primary)', height: '100%',
+                    width: `${Math.min(100, (logStats.exactBytes / 1024 / 1024) / parseFloat(settings.maxLogSpaceMb) * 100)}%`,
+                    transition: 'width 0.3s ease'
+                  }} />
+                </div>
               </div>
             </div>
           </div>
 
           {/* Log table */}
           <div className="card" style={{ overflow: 'hidden' }}>
-            <div className="p-5 border-b flex justify-between items-center" style={{ background: 'var(--bg-input)' }}>
+            <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border)', background: 'var(--bg-input)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 className="font-bold text-lg m-0 flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
                 <Activity size={18} /> Журнал аудита
               </h3>
@@ -574,10 +622,33 @@ const AdminPanel = () => {
                 <thead>
                   <tr style={{ borderBottom: '2px solid var(--border)', position: 'sticky', top: 0, background: 'white', zIndex: 1 }}>
                     <th style={{ width: '46px' }} />
-                    <th style={{ padding: '0.6rem 0.5rem', textAlign: 'left', fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Время</th>
-                    <th style={{ padding: '0.6rem 0.5rem', textAlign: 'left', fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Пользователь</th>
-                    <th style={{ padding: '0.6rem 0.5rem', textAlign: 'left', fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Действие</th>
-                    <th style={{ padding: '0.6rem 0.5rem', textAlign: 'left', fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Объект</th>
+                    <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Время</th>
+                    <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left' }}>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }}>Пользователь</div>
+                      <input
+                        type="text"
+                        placeholder="Фильтр..."
+                        value={logFilter}
+                        onChange={e => setLogFilter(e.target.value)}
+                        onClick={e => e.stopPropagation()}
+                        style={{ fontSize: '0.75rem', padding: '0.2rem 0.4rem', border: '1px solid var(--border)', borderRadius: '4px', width: '100%', outline: 'none', background: 'var(--bg-input)' }}
+                      />
+                    </th>
+                    <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left' }}>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }}>Действие</div>
+                      <select
+                        value={logActionFilter}
+                        onChange={e => setLogActionFilter(e.target.value)}
+                        onClick={e => e.stopPropagation()}
+                        style={{ fontSize: '0.75rem', padding: '0.2rem 0.4rem', border: '1px solid var(--border)', borderRadius: '4px', width: '100%', outline: 'none', background: 'var(--bg-input)' }}
+                      >
+                        <option value="">Все</option>
+                        {Object.entries(ACTION_META).map(([k, v]) => (
+                          <option key={k} value={k}>{v.label}</option>
+                        ))}
+                      </select>
+                    </th>
+                    <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Объект</th>
                     <th style={{ width: '36px' }} />
                   </tr>
                 </thead>

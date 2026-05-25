@@ -152,7 +152,7 @@ export const api = {
 
   updateSettings: async (settings) => {
     const res = await fetchWithAuth(`${API_URL}/settings`, {
-      method: 'POST',
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(settings)
     });
