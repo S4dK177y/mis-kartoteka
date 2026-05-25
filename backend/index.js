@@ -4,7 +4,7 @@ const os = require('os');
 
 const PORT = process.env.PORT || 8080;
 
-app.listen(PORT, '0.0.0.0', () => {
+app.listen(PORT, process.env.HOST || '0.0.0.0', () => {
   const networkInterfaces = os.networkInterfaces();
   let ipAddress = 'localhost';
 

@@ -1,19 +1,100 @@
+// Navigation
+const navItems = document.querySelectorAll('.nav-item');
+const views = document.querySelectorAll('.view');
+
+navItems.forEach(item => {
+  item.addEventListener('click', () => {
+    navItems.forEach(nav => nav.classList.remove('active'));
+    views.forEach(view => view.classList.remove('active'));
+    
+    item.classList.add('active');
+    document.getElementById(`view-${item.dataset.target}`).classList.add('active');
+  });
+});
+
+// Elements
 const btnStart = document.getElementById('btn-start');
 const btnStop = document.getElementById('btn-stop');
 const btnBrowser = document.getElementById('btn-browser');
 const statusIndicator = document.getElementById('status-indicator');
 const statusText = document.getElementById('status-text');
 const consoleOutput = document.getElementById('console-output');
+const networkIp = document.getElementById('network-ip');
 
+// Settings Elements
+const configPort = document.getElementById('config-port');
+const configNetwork = document.getElementById('config-network');
+const btnSaveConfig = document.getElementById('btn-save-config');
+const btnResetAdmin = document.getElementById('btn-reset-admin');
+
+// Config and State
+let currentConfig = { port: 8080, networkMode: 'local' };
 let currentFilter = 'all';
 
+async function init() {
+  currentConfig = await window.api.getConfig();
+  configPort.value = currentConfig.port;
+  configNetwork.value = currentConfig.networkMode;
+  await updateNetworkDisplay();
+  
+  const isRunning = await window.api.getStatus();
+  updateUI(isRunning);
+}
+
+async function updateNetworkDisplay() {
+  if (currentConfig.networkMode === 'local') {
+    networkIp.textContent = `http://localhost:${currentConfig.port}`;
+  } else {
+    const ips = await window.api.getIps();
+    if (ips.length > 0) {
+      networkIp.innerHTML = ips.map(ip => `http://${ip}:${currentConfig.port}`).join('<br>');
+    } else {
+      networkIp.textContent = `http://localhost:${currentConfig.port}`;
+    }
+  }
+}
+
+btnSaveConfig.addEventListener('click', async () => {
+  currentConfig.port = parseInt(configPort.value, 10) || 8080;
+  currentConfig.networkMode = configNetwork.value;
+  await window.api.saveConfig(currentConfig);
+  await updateNetworkDisplay();
+  
+  const btn = btnSaveConfig;
+  const originalText = btn.textContent;
+  btn.textContent = 'Сохранено!';
+  btn.classList.replace('btn-primary', 'btn-success');
+  btn.style.background = 'var(--success)';
+  setTimeout(() => {
+    btn.textContent = originalText;
+    btn.style.background = '';
+    btn.classList.replace('btn-success', 'btn-primary');
+  }, 2000);
+});
+
+btnResetAdmin.addEventListener('click', async () => {
+  if (confirm('Вы уверены, что хотите сбросить пароль администратора на "admin"? Это действие нельзя отменить.')) {
+    const btn = btnResetAdmin;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = 'Сброс...';
+    btn.disabled = true;
+    
+    const res = await window.api.resetAdmin();
+    alert(res.message);
+    
+    btn.innerHTML = originalText;
+    btn.disabled = false;
+  }
+});
+
+// Console Logic
 function appendLog(text) {
   let isError = text.includes('[ОШИБКА]') || text.includes('Error') || text.includes('Exception');
   let isInfo = !isError && (text.includes('[СИСТЕМА]') || text.includes('Server') || text.includes('GET') || text.includes('POST') || text.includes('PUT') || text.includes('DELETE'));
   
   let formattedText = text
     .replace(/\[ОШИБКА\]/g, '<span style="color: #ef4444; font-weight: bold;">[ОШИБКА]</span>')
-    .replace(/\[СИСТЕМА\]/g, '<span style="color: #0ea5e9; font-weight: bold;">[СИСТЕМА]</span>')
+    .replace(/\[СИСТЕМА\]/g, '<span style="color: #3b82f6; font-weight: bold;">[СИСТЕМА]</span>')
     .replace(/Сервер запущен на порту/gi, '<span style="color: #10b981; font-weight: bold;">Сервер запущен на порту</span>');
 
   const span = document.createElement('span');
@@ -68,18 +149,20 @@ function updateUI(isRunning) {
     btnStop.disabled = false;
     btnBrowser.disabled = false;
     statusIndicator.className = 'indicator online';
-    statusText.textContent = 'Работает (Порт 8080)';
+    statusText.textContent = `Работает (Порт ${currentConfig.port})`;
+    statusText.style.color = 'var(--success)';
   } else {
     btnStart.disabled = false;
     btnStop.disabled = true;
     btnBrowser.disabled = true;
     statusIndicator.className = 'indicator offline';
     statusText.textContent = 'Остановлен';
+    statusText.style.color = 'var(--text-main)';
   }
 }
 
 btnStart.addEventListener('click', async () => {
-  appendLog('<span style="color: #0ea5e9;">> Запуск базы данных и сервера...</span>\n');
+  appendLog('<span style="color: #3b82f6;">> Запуск базы данных и сервера...</span>\n');
   const res = await window.api.startServer();
   if (res.success) {
     updateUI(true);
@@ -106,5 +189,4 @@ window.api.onStatusChange((status) => {
   updateUI(status);
 });
 
-// Check initial status
-window.api.getStatus().then(updateUI);
+init();

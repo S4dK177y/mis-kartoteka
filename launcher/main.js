@@ -1,6 +1,27 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
+const os = require('os');
+const fs = require('fs');
 const { fork } = require('child_process');
+
+const configPath = path.join(app.getPath('userData'), 'config.json');
+const defaultConfig = {
+  port: 8080,
+  networkMode: 'local'
+};
+
+function getConfig() {
+  try {
+    if (fs.existsSync(configPath)) {
+      return { ...defaultConfig, ...JSON.parse(fs.readFileSync(configPath, 'utf8')) };
+    }
+  } catch(e) {}
+  return defaultConfig;
+}
+
+function saveConfig(config) {
+  fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+}
 
 let mainWindow;
 let serverProcess = null;
@@ -37,8 +58,6 @@ app.on('window-all-closed', function () {
   if (process.platform !== 'darwin') app.quit();
 });
 
-const fs = require('fs');
-
 function findBackendPath() {
   if (!app.isPackaged) return path.join(__dirname, '../backend');
   
@@ -64,6 +83,7 @@ ipcMain.handle('start-server', async () => {
   if (serverProcess) return { success: false, message: 'Server already running' };
   
   try {
+    const config = getConfig();
     const backendPath = findBackendPath();
     
     // Check if index.js actually exists to prevent ENOENT crash
@@ -73,7 +93,12 @@ ipcMain.handle('start-server', async () => {
 
     serverProcess = fork(path.join(backendPath, 'index.js'), [], { 
       cwd: backendPath,
-      env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
+      env: { 
+        ...process.env, 
+        ELECTRON_RUN_AS_NODE: '1',
+        PORT: config.port.toString(),
+        HOST: config.networkMode === 'local' ? '127.0.0.1' : '0.0.0.0'
+      },
       stdio: ['pipe', 'pipe', 'pipe', 'ipc']
     });
 
@@ -112,5 +137,48 @@ ipcMain.handle('get-status', () => {
 });
 
 ipcMain.handle('open-browser', () => {
-  require('electron').shell.openExternal('http://localhost:8080');
+  const config = getConfig();
+  require('electron').shell.openExternal(`http://localhost:${config.port}`);
+});
+
+ipcMain.handle('get-config', () => getConfig());
+ipcMain.handle('save-config', (event, config) => saveConfig(config));
+
+ipcMain.handle('get-ips', () => {
+  const networkInterfaces = os.networkInterfaces();
+  const ips = [];
+  for (const interfaceName in networkInterfaces) {
+    const interfaces = networkInterfaces[interfaceName];
+    for (const info of interfaces) {
+      if (info.family === 'IPv4' && !info.internal) {
+        ips.push(info.address);
+      }
+    }
+  }
+  return ips;
+});
+
+ipcMain.handle('reset-admin', async () => {
+  return new Promise((resolve) => {
+    const backendPath = findBackendPath();
+    const scriptPath = path.join(backendPath, 'scripts', 'reset-admin.js');
+    if (!fs.existsSync(scriptPath)) {
+      return resolve({ success: false, message: 'Скрипт сброса не найден: ' + scriptPath });
+    }
+    
+    const resetProc = fork(scriptPath, [], {
+      cwd: backendPath,
+      env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
+      stdio: 'pipe'
+    });
+    
+    let output = '';
+    resetProc.stdout.on('data', d => output += d.toString());
+    resetProc.stderr.on('data', d => output += d.toString());
+
+    resetProc.on('close', (code) => {
+      if (code === 0) resolve({ success: true, message: 'Пароль успешно сброшен на "admin"' });
+      else resolve({ success: false, message: 'Ошибка при сбросе пароля:\n' + output });
+    });
+  });
 });
