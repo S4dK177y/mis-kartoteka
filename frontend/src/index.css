@@ -388,7 +388,12 @@ select.input-field {
 }
 @media (max-width: 900px) {
   .grid-2, .grid-3, .grid-layout-admin {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .grid-3 > div, .grid-2 > div {
+    grid-column: span 1 !important;
   }
 }
 
