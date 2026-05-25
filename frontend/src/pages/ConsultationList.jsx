@@ -9,8 +9,12 @@ export default function ConsultationList() {
   const navigate = useNavigate();
 
   // Filters
-  const [search, setSearch] = useState('');
-  const [typeFilter, setTypeFilter] = useState('ALL'); // ALL, REGULAR, VVK
+  const [nameFilter, setNameFilter] = useState('');
+  const [typeFilter, setTypeFilter] = useState(''); // '', REGULAR, VVK
+  const [serviceFilter, setServiceFilter] = useState('');
+  const [diagnosisFilter, setDiagnosisFilter] = useState('');
+  const [dateFilter, setDateFilter] = useState('');
+  const [nextDateFilter, setNextDateFilter] = useState('');
   
   // Sorting
   const [sortField, setSortField] = useState('consultationDate'); 
@@ -47,9 +51,28 @@ export default function ConsultationList() {
 
   const getFilteredConsultations = () => {
     let result = consultations.filter(c => {
-      const searchStr = search.toLowerCase();
-      if (searchStr && !c.fullName.toLowerCase().includes(searchStr)) return false;
-      if (typeFilter !== 'ALL' && c.type !== typeFilter) return false;
+      const nameStr = nameFilter.toLowerCase();
+      if (nameFilter && (!c.fullName || !c.fullName.toLowerCase().includes(nameStr))) return false;
+      
+      if (typeFilter && c.type !== typeFilter) return false;
+
+      const serviceText = c.militaryStatus || '';
+      if (serviceFilter && (!serviceText || !serviceText.toLowerCase().includes(serviceFilter.toLowerCase()))) return false;
+
+      const diagStr = (c.diagnosis || c.notes || '').toLowerCase();
+      if (diagnosisFilter && !diagStr.includes(diagnosisFilter.toLowerCase())) return false;
+
+      if (dateFilter) {
+        const cDate = new Date(c.consultationDate).toISOString().split('T')[0];
+        if (cDate !== dateFilter) return false;
+      }
+
+      if (nextDateFilter) {
+        if (!c.nextConsultationDate) return false;
+        const nDate = new Date(c.nextConsultationDate).toISOString().split('T')[0];
+        if (nDate !== nextDateFilter) return false;
+      }
+
       return true;
     });
 
@@ -76,22 +99,6 @@ export default function ConsultationList() {
 
   return (
     <div className="animate-fade-in flex-col" style={{ height: '100%' }}>
-      <div className="flex justify-between items-end mb-4 gap-4 flex-wrap">
-        <div style={{ flex: 1, minWidth: '400px' }}>
-          <div style={{ position: 'relative', width: '100%' }}>
-            <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-            <input 
-              type="text" 
-              className="input-field" 
-              placeholder="Поиск по ФИО..."
-              style={{ paddingLeft: '36px', marginBottom: 0, width: '100%' }}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-        </div>
-      </div>
-
       <div className="card table-wrapper" style={{ flex: 1 }}>
         {loading ? (
           <div className="p-6 text-center text-muted">Загрузка данных...</div>
@@ -100,39 +107,84 @@ export default function ConsultationList() {
         ) : (
           <table>
             <thead>
-              <tr>
-                <th>
-                  <div className="flex-col gap-1">
-                    <span className="flex items-center gap-1 cursor-pointer select-none hover:text-primary" onClick={() => handleSort('fullName')}>
-                      ФИО <SortIcon field="fullName" />
-                    </span>
+              <tr style={{ borderBottom: '2px solid var(--border)', position: 'sticky', top: 0, background: 'white', zIndex: 1 }}>
+                <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left' }}>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }} className="flex items-center gap-1 cursor-pointer hover:text-primary" onClick={() => handleSort('fullName')}>
+                    ФИО <SortIcon field="fullName" />
                   </div>
+                  <input 
+                    type="text" 
+                    placeholder="Фильтр..." 
+                    value={nameFilter}
+                    onChange={e => setNameFilter(e.target.value)}
+                    onClick={e => e.stopPropagation()}
+                    style={{ fontSize: '0.75rem', padding: '0.2rem 0.4rem', border: '1px solid var(--border)', borderRadius: '4px', width: '100%', outline: 'none', background: 'var(--bg-input)' }}
+                  />
                 </th>
-                <th>Служба</th>
-                <th>
-                  <div className="flex-col gap-1">
-                    <span>Тип</span>
-                    <select className="input-field" style={{ padding: '2px 4px', fontSize: '0.75rem', marginTop: '4px', maxWidth: '100px' }} value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
-                      <option value="ALL">Все</option>
-                      <option value="REGULAR">Обычный</option>
-                      <option value="VVK">ВВК</option>
-                    </select>
+                <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', width: '110px' }}>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }}>
+                    Служба
                   </div>
+                  <input 
+                    type="text" 
+                    placeholder="Фильтр..." 
+                    value={serviceFilter}
+                    onChange={e => setServiceFilter(e.target.value)}
+                    onClick={e => e.stopPropagation()}
+                    style={{ fontSize: '0.75rem', padding: '0.2rem 0.4rem', border: '1px solid var(--border)', borderRadius: '4px', width: '100%', outline: 'none', background: 'var(--bg-input)' }}
+                  />
                 </th>
-                <th>Диагноз / Заключение</th>
-                <th>
-                  <div className="flex-col gap-1">
-                    <span className="flex items-center gap-1 cursor-pointer select-none hover:text-primary" onClick={() => handleSort('consultationDate')}>
-                      Дата приема <SortIcon field="consultationDate" />
-                    </span>
+                <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', width: '120px' }}>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }}>
+                    Тип
                   </div>
+                  <select 
+                    value={typeFilter} 
+                    onChange={e => setTypeFilter(e.target.value)}
+                    onClick={e => e.stopPropagation()}
+                    style={{ fontSize: '0.75rem', padding: '0.2rem 0.4rem', border: '1px solid var(--border)', borderRadius: '4px', width: '100%', outline: 'none', background: 'var(--bg-input)' }}
+                  >
+                    <option value="">Все</option>
+                    <option value="REGULAR">Обычный</option>
+                    <option value="VVK">ВВК</option>
+                  </select>
                 </th>
-                <th>
-                  <div className="flex-col gap-1">
-                    <span className="flex items-center gap-1 cursor-pointer select-none hover:text-primary" onClick={() => handleSort('nextConsultationDate')}>
-                      Следующий визит <SortIcon field="nextConsultationDate" />
-                    </span>
+                <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left' }}>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }}>
+                    Диагноз / Заключение
                   </div>
+                  <input 
+                    type="text" 
+                    placeholder="Фильтр..." 
+                    value={diagnosisFilter}
+                    onChange={e => setDiagnosisFilter(e.target.value)}
+                    onClick={e => e.stopPropagation()}
+                    style={{ fontSize: '0.75rem', padding: '0.2rem 0.4rem', border: '1px solid var(--border)', borderRadius: '4px', width: '100%', outline: 'none', background: 'var(--bg-input)' }}
+                  />
+                </th>
+                <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', width: '130px' }}>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }} className="flex items-center gap-1 cursor-pointer hover:text-primary" onClick={() => handleSort('consultationDate')}>
+                    Дата приема <SortIcon field="consultationDate" />
+                  </div>
+                  <input 
+                    type="date" 
+                    value={dateFilter}
+                    onChange={e => setDateFilter(e.target.value)}
+                    onClick={e => e.stopPropagation()}
+                    style={{ fontSize: '0.75rem', padding: '0.2rem 0.4rem', border: '1px solid var(--border)', borderRadius: '4px', width: '100%', outline: 'none', background: 'var(--bg-input)' }}
+                  />
+                </th>
+                <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', width: '130px' }}>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }} className="flex items-center gap-1 cursor-pointer hover:text-primary" onClick={() => handleSort('nextConsultationDate')}>
+                    Следующий визит <SortIcon field="nextConsultationDate" />
+                  </div>
+                  <input 
+                    type="date" 
+                    value={nextDateFilter}
+                    onChange={e => setNextDateFilter(e.target.value)}
+                    onClick={e => e.stopPropagation()}
+                    style={{ fontSize: '0.75rem', padding: '0.2rem 0.4rem', border: '1px solid var(--border)', borderRadius: '4px', width: '100%', outline: 'none', background: 'var(--bg-input)' }}
+                  />
                 </th>
               </tr>
             </thead>

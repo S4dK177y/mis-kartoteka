@@ -10,12 +10,13 @@ export default function PatientList() {
   const navigate = useNavigate();
 
   // Filters
-  const [search, setSearch] = useState('');
+  const [nameFilter, setNameFilter] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [ibFilter, setIbFilter] = useState('');
-
+  const [serviceFilter, setServiceFilter] = useState('');
   const [diagnosisFilter, setDiagnosisFilter] = useState('');
+  const [dateFilter, setDateFilter] = useState('');
   
   // Sorting
   const [sortField, setSortField] = useState('admissionDate'); 
@@ -56,22 +57,27 @@ export default function PatientList() {
 
   const getFilteredPatients = () => {
     let result = patients.filter(p => {
-      // General Text Search (Full Name and IB)
-      const searchStr = search.toLowerCase();
-      if (searchStr && !p.fullName.toLowerCase().includes(searchStr) && !(p.caseHistoryNumber && p.caseHistoryNumber.toLowerCase().includes(searchStr))) return false;
+      const nameStr = nameFilter.toLowerCase();
+      const matchesName = !nameFilter || (p.fullName && p.fullName.toLowerCase().includes(nameStr));
+      
+      const matchesIb = !ibFilter || (p.caseHistoryNumber && p.caseHistoryNumber.includes(ibFilter));
+      const matchesDep = !departmentFilter || p.department === departmentFilter;
 
-      // Specific Filters
-      if (departmentFilter && p.department !== departmentFilter) return false;
-      if (statusFilter && p.status !== statusFilter) return false;
-      
-      if (ibFilter && (!p.caseHistoryNumber || !p.caseHistoryNumber.toLowerCase().includes(ibFilter.toLowerCase()))) return false;
-      
-      if (diagnosisFilter) {
-        const diagStr = getDisplayDiagnosis(p).toLowerCase();
-        if (!diagStr.includes(diagnosisFilter.toLowerCase())) return false;
+      const serviceText = p.isSvoParticipant ? 'СВО' : p.militaryStatus;
+      const matchesService = !serviceFilter || (serviceText && serviceText.toLowerCase().includes(serviceFilter.toLowerCase()));
+
+      const diagStr = diagnosisFilter.toLowerCase();
+      const matchesDiag = !diagnosisFilter || getDisplayDiagnosis(p).toLowerCase().includes(diagStr);
+
+      const matchesStatus = !statusFilter || p.status === statusFilter;
+
+      let matchesDate = true;
+      if (dateFilter) {
+        const pDate = new Date(p.admissionDate).toISOString().split('T')[0];
+        matchesDate = pDate === dateFilter;
       }
 
-      return true;
+      return matchesName && matchesIb && matchesDep && matchesService && matchesDiag && matchesStatus && matchesDate;
     });
 
     result.sort((a, b) => {
@@ -97,23 +103,6 @@ export default function PatientList() {
 
   return (
     <div className="animate-fade-in flex-col" style={{ height: '100%' }}>
-      <div className="flex justify-between items-end mb-4 gap-4 flex-wrap">
-        <div style={{ flex: 1 }}>
-          <div style={{ position: 'relative' }}>
-            <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-            <input 
-              type="text" 
-              className="input-field" 
-              placeholder="Поиск по ФИО или № ИБ..."
-              style={{ paddingLeft: '36px', marginBottom: 0, width: '100%' }}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-        </div>
-        
-      </div>
-
       <div className="card table-wrapper" style={{ flex: 1 }}>
         {loading ? (
           <div className="p-6 text-center text-muted">Загрузка данных...</div>
