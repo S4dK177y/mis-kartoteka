@@ -74,17 +74,17 @@ export default function PersonProfile() {
   };
 
   const combinedHistory = person ? [
-    ...(person.hospitalizations || []).map(h => ({ ...h, type: 'hospitalization' })),
-    ...(person.consultations || []).map(c => ({ ...c, type: 'consultation' }))
+    ...(person.hospitalizations || []).map(h => ({ ...h, entryType: 'hospitalization' })),
+    ...(person.consultations || []).map(c => ({ ...c, entryType: c.type === 'VVK' ? 'vvk' : 'consultation' }))
   ].sort((a, b) => {
-    const dateA = new Date(a.type === 'hospitalization' ? a.admissionDate : a.consultationDate);
-    const dateB = new Date(b.type === 'hospitalization' ? b.admissionDate : b.consultationDate);
+    const dateA = new Date(a.entryType === 'hospitalization' ? a.admissionDate : a.consultationDate);
+    const dateB = new Date(b.entryType === 'hospitalization' ? b.admissionDate : b.consultationDate);
     return dateB - dateA;
   }) : [];
 
   const filteredHistory = combinedHistory.filter(item => {
     if (historyFilter === 'all') return true;
-    return item.type === historyFilter;
+    return item.entryType === historyFilter;
   });
 
   if (loading) return <div className="p-8 text-center text-muted">Загрузка данных...</div>;
@@ -178,7 +178,8 @@ export default function PersonProfile() {
             <div className="flex gap-2">
               <button className={`btn btn-sm ${historyFilter === 'all' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setHistoryFilter('all')}>Все</button>
               <button className={`btn btn-sm ${historyFilter === 'hospitalization' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setHistoryFilter('hospitalization')}>Госпитализации</button>
-              <button className={`btn btn-sm ${historyFilter === 'consultation' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setHistoryFilter('consultation')}>Приемы</button>
+              <button className={`btn btn-sm ${historyFilter === 'consultation' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setHistoryFilter('consultation')}>Обычные приемы</button>
+              <button className={`btn btn-sm ${historyFilter === 'vvk' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setHistoryFilter('vvk')}>ВВК</button>
             </div>
           </div>
           <div className="p-4">
@@ -194,21 +195,21 @@ export default function PersonProfile() {
                 </thead>
                 <tbody>
                   {filteredHistory.map(item => {
-                    const isHosp = item.type === 'hospitalization';
+                    const isHosp = item.entryType === 'hospitalization';
+                    const isVvk = item.entryType === 'vvk';
+                    const isConsult = item.entryType === 'consultation';
                     const date = isHosp ? item.admissionDate : item.consultationDate;
-                    const path = isHosp ? `/patients/${item.id}` : `/consultations/${item.id}/edit`;
+                    const path = isHosp ? `/patients/${item.id}` : `/consultations/${item.id}`;
                     
                     return (
-                      <tr key={`${item.type}-${item.id}`} style={{ background: 'white', boxShadow: 'var(--shadow-sm)', borderRadius: 'var(--radius-sm)', cursor: 'pointer' }} onClick={() => navigate(path)}>
+                      <tr key={`${item.entryType}-${item.id}`} style={{ background: 'white', boxShadow: 'var(--shadow-sm)', borderRadius: 'var(--radius-sm)', cursor: 'pointer' }} onClick={() => navigate(path)}>
                         <td className="p-4 font-medium" style={{ borderRadius: 'var(--radius-sm) 0 0 var(--radius-sm)' }}>
                           {new Date(date).toLocaleDateString('ru-RU')}
                         </td>
                         <td className="p-4 text-sm text-muted">
-                          {isHosp ? (
-                            <span className="flex items-center gap-1"><Activity size={14} className="text-primary"/> Госпитализация</span>
-                          ) : (
-                            <span className="flex items-center gap-1"><FileText size={14} className="text-secondary"/> Прием</span>
-                          )}
+                          {isHosp && <span className="flex items-center gap-1"><Activity size={14} className="text-primary"/> Госпитализация</span>}
+                          {isConsult && <span className="flex items-center gap-1"><FileText size={14} className="text-secondary"/> Обычный прием</span>}
+                          {isVvk && <span className="flex items-center gap-1" style={{ color: '#4338ca', fontWeight: 600 }}><FileText size={14} /> ВВК</span>}
                         </td>
                         <td className="p-4 text-sm">
                           {isHosp ? (
@@ -229,8 +230,8 @@ export default function PersonProfile() {
                               {item.status}
                             </span>
                           ) : (
-                            <span className="badge" style={{ background: 'var(--bg-input)', border: '1px solid var(--border)' }}>
-                              Амбулаторно
+                            <span className="badge" style={{ background: isVvk ? '#e0e7ff' : 'var(--bg-input)', border: `1px solid ${isVvk ? '#c7d2fe' : 'var(--border)'}`, color: isVvk ? '#4338ca' : 'inherit' }}>
+                              {isVvk ? 'ВВК' : 'Амбулаторно'}
                             </span>
                           )}
                         </td>

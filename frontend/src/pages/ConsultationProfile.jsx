@@ -42,69 +42,72 @@ export default function ConsultationProfile() {
   const vvk = consultation.vvkConclusion;
 
   return (
-    <div className="animate-fade-in flex-col gap-6" style={{ height: '100%', overflowY: 'auto', paddingBottom: '2rem' }}>
-      <div className="flex justify-between items-center bg-white p-4" style={{ borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-sm)' }}>
-        <div className="flex items-center gap-4">
+    <div className="animate-fade-in flex-col gap-4" style={{ maxWidth: '1200px', margin: '0 auto', paddingBottom: '2rem', width: '100%' }}>
+      <div className="flex-col gap-3 mb-4">
+        <div className="flex items-center gap-3">
           <button className="btn btn-icon btn-outline" onClick={() => navigate('/consultations')} title="Назад к списку">
-            <ArrowLeft size={18} />
+            <ArrowLeft size={16} />
           </button>
           <div>
-            <h2 className="text-2xl m-0 font-bold" style={{ color: 'var(--text-main)' }}>{consultation.fullName}</h2>
-            <div className="flex items-center gap-2 mt-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-xl m-0 flex items-center gap-2">
+                {consultation.fullName}
+              </h2>
+            </div>
+            <div className="text-muted text-sm flex gap-3 mt-1 flex-wrap">
               {consultation.type === 'VVK' ? (
-                vvk?.status === 'COMPLETED' ? (
-                  <span className="badge" style={{ background: '#e0e7ff', color: '#4f46e5', fontSize: '0.75rem' }}>ВВК (Завершено)</span>
-                ) : (
-                  <span className="badge" style={{ background: '#fef3c7', color: '#d97706', fontSize: '0.75rem' }}>ВВК (В процессе)</span>
-                )
+                <span style={{ fontWeight: '700', color: vvk?.status === 'COMPLETED' ? '#4338ca' : '#b45309' }}>
+                  ВВК {vvk?.status === 'COMPLETED' ? '(Завершено)' : '(В процессе)'}
+                </span>
               ) : (
-                <span className="badge" style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', color: 'var(--text-muted)', fontSize: '0.75rem' }}>Обычный прием</span>
+                <span className="text-muted">Обычный прием</span>
               )}
             </div>
           </div>
         </div>
-        <div className="flex gap-2">
+        
+        <div className="flex gap-2" style={{ flexWrap: 'wrap' }}>
           <button className="btn btn-outline" onClick={() => navigate(`/consultations/${id}/edit`)}>
-            <Edit size={16} /> Редактировать
+            <Edit size={14} /> Изменить
           </button>
           <button className="btn btn-danger" onClick={handleDelete}>
-            <Trash2 size={16} /> Удалить
+            <Trash2 size={14} /> Удалить
           </button>
         </div>
       </div>
 
-      <div className="grid gap-6" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
-        <div className="card p-6" style={{ boxShadow: 'var(--shadow-md)' }}>
+      <div className="grid-2 mb-4">
+        <div className="card p-4">
           <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-primary border-b pb-2"><User size={20} /> Данные пациента</h3>
           <div className="grid-2 gap-4">
             <div>
               <div className="text-xs text-muted mb-1">ФИО</div>
-              <div className="font-semibold">{consultation.fullName}</div>
+              <div className="font-semibold" style={{ fontSize: '0.9rem' }}>{consultation.fullName}</div>
             </div>
             <div>
               <div className="text-xs text-muted mb-1">Дата рождения</div>
-              <div className="font-semibold">{consultation.birthDate ? new Date(consultation.birthDate).toLocaleDateString() : '—'}</div>
+              <div className="font-semibold" style={{ fontSize: '0.9rem' }}>{consultation.birthDate ? new Date(consultation.birthDate).toLocaleDateString() : '—'}</div>
             </div>
             {(consultation.rank || consultation.militaryUnit) && (
               <>
                 <div>
                   <div className="text-xs text-muted mb-1">Звание</div>
-                  <div className="font-semibold">{consultation.rank || '—'}</div>
+                  <div className="font-semibold" style={{ fontSize: '0.9rem' }}>{consultation.rank || '—'}</div>
                 </div>
                 <div>
                   <div className="text-xs text-muted mb-1">Подразделение (в/ч)</div>
-                  <div className="font-semibold">{consultation.militaryUnit || '—'}</div>
+                  <div className="font-semibold" style={{ fontSize: '0.9rem' }}>{consultation.militaryUnit || '—'}</div>
                 </div>
               </>
             )}
             <div>
               <div className="text-xs text-muted mb-1">Статус военнослужащего</div>
-              <div className="font-semibold">{consultation.militaryStatus || '—'}</div>
+              <div className="font-semibold" style={{ fontSize: '0.9rem' }}>{consultation.militaryStatus || '—'}</div>
             </div>
           </div>
         </div>
 
-        <div className="card p-6" style={{ boxShadow: 'var(--shadow-md)' }}>
+        <div className="card p-4" style={{ boxShadow: 'var(--shadow-md)' }}>
           <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-primary border-b pb-2"><Calendar size={20} /> Детали приема</h3>
           <div className="grid-2 gap-4">
             <div>
@@ -132,16 +135,16 @@ export default function ConsultationProfile() {
       </div>
 
       {consultation.type === 'VVK' && vvk && (
-        <div className="card p-6 mb-4" style={{ borderTop: '4px solid #3b82f6', boxShadow: 'var(--shadow-md)' }}>
-          <h3 className="text-xl m-0 font-bold mb-6" style={{ color: '#1e293b' }}>Заключение ВВК</h3>
+        <div className="card p-4 mb-4" style={{ borderTop: '4px solid #3b82f6', boxShadow: 'var(--shadow-md)' }}>
+          <h3 className="text-xl m-0 font-bold mb-4" style={{ color: '#1e293b' }}>Заключение ВВК</h3>
           
-          <div className="grid gap-4 mb-6" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px', marginBottom: '1.5rem' }}>
             {['neurologist', 'ophthalmologist', 'dentist', 'surgeon', 'therapist'].map(doctor => {
               const labelMap = { neurologist: 'Невролог', ophthalmologist: 'Офтальмолог', dentist: 'Стоматолог', surgeon: 'Хирург', therapist: 'Терапевт' };
               const name = `${doctor}Category`;
               return (
-                <div key={doctor} className="p-4" style={{ backgroundColor: '#f8fafc', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
-                  <div className="text-sm font-bold text-muted mb-2">{labelMap[doctor]}</div>
+                <div key={doctor} className="p-3" style={{ backgroundColor: '#f8fafc', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', textAlign: 'center' }}>
+                  <div className="text-xs font-bold text-muted mb-2">{labelMap[doctor]}</div>
                   <div className="text-lg font-bold" style={{ color: vvk[name] ? 'var(--text-main)' : 'var(--text-muted)' }}>
                     {vvk[name] || '—'}
                   </div>
@@ -150,12 +153,22 @@ export default function ConsultationProfile() {
             })}
           </div>
 
-          <div className="p-5" style={{ background: vvk.status === 'COMPLETED' ? '#f0fdf4' : '#f8fafc', border: `1px solid ${vvk.status === 'COMPLETED' ? '#bbf7d0' : 'var(--border)'}`, borderRadius: 'var(--radius-md)' }}>
-            <h4 className="text-lg font-bold mb-2" style={{ color: vvk.status === 'COMPLETED' ? '#166534' : 'inherit' }}>Итог ВВК</h4>
-            <div className="text-xl font-bold">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: vvk.status === 'COMPLETED' ? '#f0fdf4' : '#f8fafc', border: `1px solid ${vvk.status === 'COMPLETED' ? '#bbf7d0' : 'var(--border)'}`, borderRadius: 'var(--radius-md)', padding: '1.5rem 2rem' }}>
+            <h4 className="text-xl font-bold m-0" style={{ color: vvk.status === 'COMPLETED' ? '#166534' : '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Итог ВВК</h4>
+            <div style={{ 
+              color: vvk.status === 'COMPLETED' ? '#15803d' : '#334155', 
+              background: 'white', 
+              padding: '0.75rem 2.5rem', 
+              borderRadius: '1rem', 
+              border: `2px solid ${vvk.status === 'COMPLETED' ? '#86efac' : '#cbd5e1'}`, 
+              boxShadow: 'var(--shadow-md)',
+              fontSize: '1.5rem',
+              fontWeight: '900',
+              textAlign: 'center'
+            }}>
               {vvk.medicalLeaveDays 
-                ? `Отпуск по болезни: ${vvk.medicalLeaveDays} суток (Г)`
-                : `Категория: ${vvk.finalCategory || '—'}`
+                ? `Отпуск по болезни: ${vvk.medicalLeaveDays} сут. (Г)`
+                : `Категория ${vvk.finalCategory || '—'}`
               }
             </div>
           </div>

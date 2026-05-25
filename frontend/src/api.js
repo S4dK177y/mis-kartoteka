@@ -190,7 +190,10 @@ export const api = {
       method: 'POST',
       body: formData
     });
-    if (!res.ok) throw new Error('Failed to upload VVK document');
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to upload VVK document');
+    }
     return res.json();
   },
   

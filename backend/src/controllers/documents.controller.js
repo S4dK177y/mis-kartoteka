@@ -48,8 +48,12 @@ exports.uploadVvk = async (req, res) => {
 
     const consultationId = req.params.consultationId;
     const consultation = await prisma.consultation.findUnique({ where: { id: consultationId }, include: { vvkConclusion: true }});
-    if (!consultation || consultation.type !== 'VVK') {
-      return res.status(400).json({ error: 'Not a VVK consultation' });
+    if (!consultation) {
+      return res.status(404).json({ error: 'Consultation not found' });
+    }
+
+    if (consultation.type !== 'VVK') {
+      await prisma.consultation.update({ where: { id: consultationId }, data: { type: 'VVK' } });
     }
 
     const document = await prisma.document.create({
@@ -64,12 +68,17 @@ exports.uploadVvk = async (req, res) => {
       }
     });
 
-    if (consultation.vvkConclusion) {
-      await prisma.vvkConclusion.update({
-        where: { id: consultation.vvkConclusion.id },
-        data: { documentId: document.id }
-      });
-    }
+    await prisma.vvkConclusion.upsert({
+      where: { consultationId: consultationId },
+      create: {
+        consultationId: consultationId,
+        status: 'IN_PROGRESS',
+        documentId: document.id
+      },
+      update: {
+        documentId: document.id
+      }
+    });
 
     await logAction(req.user.id, 'UPLOAD', 'Document VVK', document.id, { originalName: file.originalname, consultationId });
     res.status(201).json(document);

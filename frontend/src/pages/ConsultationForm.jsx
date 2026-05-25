@@ -294,7 +294,7 @@ export default function ConsultationForm() {
       await api.uploadConsultationVvkDocument(id, file);
       await fetchConsultation();
     } catch (error) {
-      alert('Ошибка при загрузке скана заключения ВВК');
+      alert(`Ошибка при загрузке скана заключения ВВК: ${error.message}`);
     } finally {
       setUploadingVvk(false);
       if (e.target) e.target.value = null; 
@@ -547,15 +547,15 @@ export default function ConsultationForm() {
               </div>
             </div>
             
-            <div className="grid gap-4 mb-6" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px', marginBottom: '1.5rem' }}>
               {['neurologist', 'ophthalmologist', 'dentist', 'surgeon', 'therapist'].map(doctor => {
                 const labelMap = { neurologist: 'Невролог', ophthalmologist: 'Офтальмолог', dentist: 'Стоматолог', surgeon: 'Хирург', therapist: 'Терапевт' };
                 const name = `${doctor}Category`;
                 const isCompleted = vvkConclusion.status === 'COMPLETED';
                 return (
-                  <div key={doctor} className="p-4" style={{ backgroundColor: '#f8fafc', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
-                    <label className="block text-sm font-bold text-muted mb-2">{labelMap[doctor]} {isCompleted && '*'}</label>
-                    <select name={name} className="input-field" style={{ backgroundColor: 'white' }} value={vvkConclusion[name]} onChange={handleVvkChange} required={isCompleted}>
+                  <div key={doctor} className="p-3" style={{ backgroundColor: '#f8fafc', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', textAlign: 'center' }}>
+                    <label className="block text-xs font-bold text-muted mb-2">{labelMap[doctor]} {isCompleted && '*'}</label>
+                    <select name={name} className="input-field" style={{ backgroundColor: 'white', padding: '6px', textAlign: 'center', fontSize: '0.85rem' }} value={vvkConclusion[name]} onChange={handleVvkChange} required={isCompleted}>
                       <option value="">--</option>
                       <option value="А">А</option><option value="А-1">А-1</option><option value="А-2">А-2</option><option value="А-3">А-3</option><option value="А-4">А-4</option>
                       <option value="Б-1">Б-1</option><option value="Б-2">Б-2</option><option value="Б-3">Б-3</option><option value="Б-4">Б-4</option>
@@ -566,17 +566,17 @@ export default function ConsultationForm() {
               })}
             </div>
             
-            <div className="p-5 mb-4" style={{ background: vvkConclusion.status === 'COMPLETED' ? '#f0fdf4' : '#f8fafc', border: `1px solid ${vvkConclusion.status === 'COMPLETED' ? '#bbf7d0' : 'var(--border)'}`, borderRadius: 'var(--radius-md)' }}>
-              <div className="flex justify-between items-center mb-4">
+            <div className="p-6 mb-4" style={{ background: vvkConclusion.status === 'COMPLETED' ? '#f0fdf4' : '#f8fafc', border: `1px solid ${vvkConclusion.status === 'COMPLETED' ? '#bbf7d0' : 'var(--border)'}`, borderRadius: 'var(--radius-md)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border-light)' }}>
                 <h4 className="text-lg font-bold m-0" style={{ color: vvkConclusion.status === 'COMPLETED' ? '#166534' : 'inherit' }}>Итог ВВК {vvkConclusion.status === 'COMPLETED' && '*'}</h4>
-                <label className="flex items-center gap-2 cursor-pointer bg-white px-3 py-1.5 rounded-full border shadow-sm">
-                  <input type="checkbox" name="isMedicalLeave" checked={vvkConclusion.isMedicalLeave} onChange={handleVvkChange} />
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', background: vvkConclusion.isMedicalLeave ? 'var(--primary)' : 'white', color: vvkConclusion.isMedicalLeave ? 'white' : 'var(--text-main)', border: '1px solid var(--border)', padding: '6px 16px', borderRadius: 'var(--radius-md)', transition: 'all 0.2s', boxShadow: 'var(--shadow-sm)' }}>
+                  <input type="checkbox" name="isMedicalLeave" checked={vvkConclusion.isMedicalLeave} onChange={handleVvkChange} style={{ cursor: 'pointer', margin: 0 }} />
                   <span className="text-sm font-bold">Отпуск по болезни (Г)</span>
                 </label>
               </div>
               
               {!vvkConclusion.isMedicalLeave ? (
-                <div className="input-group mb-0">
+                <div className="input-group mb-0" style={{ maxWidth: '300px' }}>
                   <label className="input-label">Итоговая категория</label>
                   <select name="finalCategory" className="input-field" value={vvkConclusion.finalCategory} onChange={handleVvkChange} required={vvkConclusion.status === 'COMPLETED' && !vvkConclusion.isMedicalLeave}>
                     <option value="">Не выбрано (ожидает завершения)</option>
@@ -586,7 +586,7 @@ export default function ConsultationForm() {
                   </select>
                 </div>
               ) : (
-                <div className="input-group mb-0">
+                <div className="input-group mb-0" style={{ maxWidth: '300px' }}>
                   <label className="input-label">Количество суток отпуска</label>
                   <input type="number" name="medicalLeaveDays" className="input-field" value={vvkConclusion.medicalLeaveDays} onChange={handleVvkChange} min="1" max="365" required={vvkConclusion.status === 'COMPLETED' && vvkConclusion.isMedicalLeave} placeholder="Например: 15" />
                 </div>
@@ -609,7 +609,7 @@ export default function ConsultationForm() {
                       <a href={api.getDocumentUrl(vvkDocument.id)} className="btn btn-icon btn-outline" target="_blank" rel="noopener noreferrer">
                         <Download size={16} />
                       </a>
-                      <button type="button" className="btn btn-icon btn-danger" onClick={() => handleDeleteDocument(vvkDocument.id)}>
+                      <button type="button" className="btn btn-icon btn-danger" onClick={() => { handleDeleteDocument(vvkDocument.id); setVvkDocument(null); }}>
                         <Trash2 size={16} />
                       </button>
                     </div>

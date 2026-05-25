@@ -53,6 +53,7 @@ export default function PatientProfile() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [consultationTypeFilter, setConsultationTypeFilter] = useState('ALL');
   
   const [showTransfer, setShowTransfer] = useState(false);
   const [showDischarge, setShowDischarge] = useState(false);
@@ -602,7 +603,6 @@ export default function PatientProfile() {
                     <th style={{ padding: '10px' }}>Отделение</th>
                     <th style={{ padding: '10px' }}>Заключительный диагноз</th>
                     <th style={{ padding: '10px' }}>Статус</th>
-                    <th style={{ padding: '10px', textAlign: 'right' }}>Действия</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -637,9 +637,16 @@ export default function PatientProfile() {
 
         {/* History of Consultations (Full Width) */}
         <div className="card p-4" style={{ gridColumn: 'span 3' }}>
-          <div className="flex items-center gap-2 mb-4">
-            <FileText size={20} className="text-secondary" />
-            <h3 className="text-lg m-0" style={{ color: 'var(--text)' }}>История амбулаторных приемов</h3>
+          <div className="flex justify-between items-center mb-4">
+            <div className="flex items-center gap-2">
+              <FileText size={20} className="text-secondary" />
+              <h3 className="text-lg m-0" style={{ color: 'var(--text)' }}>История амбулаторных приемов</h3>
+            </div>
+            <select className="input-field" style={{ width: 'auto', padding: '6px 12px' }} value={consultationTypeFilter} onChange={e => setConsultationTypeFilter(e.target.value)}>
+              <option value="ALL">Все приемы</option>
+              <option value="REGULAR">Обычные</option>
+              <option value="VVK">ВВК</option>
+            </select>
           </div>
           
           {(!patient.consultations || patient.consultations.length === 0) ? (
@@ -652,26 +659,27 @@ export default function PatientProfile() {
                 <thead>
                   <tr style={{ borderBottom: '2px solid var(--border)', textAlign: 'left', color: 'var(--text-muted)' }}>
                     <th style={{ padding: '10px' }}>Дата приема</th>
+                    <th style={{ padding: '10px' }}>Тип</th>
                     <th style={{ padding: '10px' }}>Диагноз</th>
                     <th style={{ padding: '10px' }}>Следующий визит</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {patient.consultations.map(consult => (
-                    <tr key={consult.id} style={{ borderBottom: '1px solid var(--border-light)', cursor: 'pointer' }} onClick={() => { window.scrollTo(0, 0); navigate(`/consultations/${consult.id}/edit`); }}>
+                  {patient.consultations
+                    .filter(c => consultationTypeFilter === 'ALL' || c.type === consultationTypeFilter)
+                    .map(consult => (
+                    <tr key={consult.id} style={{ borderBottom: '1px solid var(--border-light)', cursor: 'pointer' }} onClick={() => { window.scrollTo(0, 0); navigate(`/consultations/${consult.id}`); }}>
                       <td style={{ padding: '10px' }}>
                         {new Date(consult.consultationDate).toLocaleDateString('ru-RU')}
                       </td>
                       <td style={{ padding: '10px' }}>
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="mb-1">
                           {consult.type === 'VVK' ? (
-                            consult.vvkConclusion?.status === 'COMPLETED' ? (
-                              <span className="badge" style={{ background: '#e0e7ff', color: '#4f46e5', fontSize: '0.65rem' }}>ВВК (Завершено)</span>
-                            ) : (
-                              <span className="badge" style={{ background: '#fef3c7', color: '#d97706', fontSize: '0.65rem' }}>ВВК (В процессе)</span>
-                            )
+                            <span style={{ fontWeight: '700', color: consult.vvkConclusion?.status === 'COMPLETED' ? '#4338ca' : '#b45309', fontSize: '0.8rem' }}>
+                              ВВК {consult.vvkConclusion?.status === 'COMPLETED' ? '(Завершено)' : '(В процессе)'}
+                            </span>
                           ) : (
-                            <span className="badge" style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', color: 'var(--text-muted)', fontSize: '0.65rem' }}>Обычный</span>
+                            <span className="text-muted" style={{ fontSize: '0.8rem' }}>Обычный</span>
                           )}
                         </div>
                         <div style={{ maxWidth: '400px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={consult.diagnosis || 'Нет диагноза'}>

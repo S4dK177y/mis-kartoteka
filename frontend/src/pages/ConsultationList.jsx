@@ -77,7 +77,7 @@ export default function ConsultationList() {
   return (
     <div className="animate-fade-in flex-col" style={{ height: '100%' }}>
       <div className="flex justify-between items-end mb-4 gap-4 flex-wrap">
-        <div style={{ flex: 1 }}>
+        <div style={{ flex: 1, maxWidth: '400px' }}>
           <div style={{ position: 'relative' }}>
             <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
             <input 
@@ -89,13 +89,6 @@ export default function ConsultationList() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-        </div>
-        <div>
-          <select className="input-field" style={{ marginBottom: 0, minWidth: '150px' }} value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
-            <option value="ALL">Все приемы</option>
-            <option value="REGULAR">Обычные</option>
-            <option value="VVK">ВВК</option>
-          </select>
         </div>
       </div>
 
@@ -116,7 +109,16 @@ export default function ConsultationList() {
                   </div>
                 </th>
                 <th>Служба</th>
-                <th>Тип</th>
+                <th>
+                  <div className="flex-col gap-1">
+                    <span>Тип</span>
+                    <select className="input-field" style={{ padding: '2px 4px', fontSize: '0.75rem', marginTop: '4px', maxWidth: '100px' }} value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
+                      <option value="ALL">Все</option>
+                      <option value="REGULAR">Обычный</option>
+                      <option value="VVK">ВВК</option>
+                    </select>
+                  </div>
+                </th>
                 <th>Диагноз / Заключение</th>
                 <th>
                   <div className="flex-col gap-1">
@@ -162,13 +164,11 @@ export default function ConsultationList() {
                   </td>
                   <td>
                     {consult.type === 'VVK' ? (
-                      consult.vvkConclusion?.status === 'COMPLETED' ? (
-                        <span className="badge" style={{ background: '#e0e7ff', color: '#4f46e5', fontSize: '0.65rem' }}>ВВК (Завершено)</span>
-                      ) : (
-                        <span className="badge" style={{ background: '#fef3c7', color: '#d97706', fontSize: '0.65rem' }}>ВВК (В процессе)</span>
-                      )
+                      <span style={{ fontWeight: '700', color: consult.vvkConclusion?.status === 'COMPLETED' ? '#4338ca' : '#b45309', fontSize: '0.8rem' }}>
+                        ВВК {consult.vvkConclusion?.status === 'COMPLETED' ? '(Завершено)' : '(В процессе)'}
+                      </span>
                     ) : (
-                      <span className="text-muted" style={{ fontSize: '0.75rem' }}>Обычный</span>
+                      <span className="text-muted" style={{ fontSize: '0.8rem' }}>Обычный</span>
                     )}
                   </td>
                   <td style={{ fontSize: '0.75rem' }}>
