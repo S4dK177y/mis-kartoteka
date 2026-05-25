@@ -547,7 +547,7 @@ export default function ConsultationForm() {
               </div>
             </div>
             
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px', marginBottom: '1.5rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '12px', marginBottom: '1.5rem' }}>
               {['neurologist', 'ophthalmologist', 'dentist', 'surgeon', 'therapist'].map(doctor => {
                 const labelMap = { neurologist: 'Невролог', ophthalmologist: 'Офтальмолог', dentist: 'Стоматолог', surgeon: 'Хирург', therapist: 'Терапевт' };
                 const name = `${doctor}Category`;
@@ -567,7 +567,7 @@ export default function ConsultationForm() {
             </div>
             
             <div className="p-6 mb-4" style={{ background: vvkConclusion.status === 'COMPLETED' ? '#f0fdf4' : '#f8fafc', border: `1px solid ${vvkConclusion.status === 'COMPLETED' ? '#bbf7d0' : 'var(--border)'}`, borderRadius: 'var(--radius-md)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border-light)' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border-light)' }}>
                 <h4 className="text-lg font-bold m-0" style={{ color: vvkConclusion.status === 'COMPLETED' ? '#166534' : 'inherit' }}>Итог ВВК {vvkConclusion.status === 'COMPLETED' && '*'}</h4>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', background: vvkConclusion.isMedicalLeave ? 'var(--primary)' : 'white', color: vvkConclusion.isMedicalLeave ? 'white' : 'var(--text-main)', border: '1px solid var(--border)', padding: '6px 16px', borderRadius: 'var(--radius-md)', transition: 'all 0.2s', boxShadow: 'var(--shadow-sm)' }}>
                   <input type="checkbox" name="isMedicalLeave" checked={vvkConclusion.isMedicalLeave} onChange={handleVvkChange} style={{ cursor: 'pointer', margin: 0 }} />

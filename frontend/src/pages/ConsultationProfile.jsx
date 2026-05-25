@@ -138,7 +138,7 @@ export default function ConsultationProfile() {
         <div className="card p-4 mb-4" style={{ borderTop: '4px solid #3b82f6', boxShadow: 'var(--shadow-md)' }}>
           <h3 className="text-xl m-0 font-bold mb-4" style={{ color: '#1e293b' }}>Заключение ВВК</h3>
           
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px', marginBottom: '1.5rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '12px', marginBottom: '1.5rem' }}>
             {['neurologist', 'ophthalmologist', 'dentist', 'surgeon', 'therapist'].map(doctor => {
               const labelMap = { neurologist: 'Невролог', ophthalmologist: 'Офтальмолог', dentist: 'Стоматолог', surgeon: 'Хирург', therapist: 'Терапевт' };
               const name = `${doctor}Category`;
@@ -153,7 +153,7 @@ export default function ConsultationProfile() {
             })}
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: vvk.status === 'COMPLETED' ? '#f0fdf4' : '#f8fafc', border: `1px solid ${vvk.status === 'COMPLETED' ? '#bbf7d0' : 'var(--border)'}`, borderRadius: 'var(--radius-md)', padding: '1.5rem 2rem' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', justifyContent: 'space-between', alignItems: 'center', background: vvk.status === 'COMPLETED' ? '#f0fdf4' : '#f8fafc', border: `1px solid ${vvk.status === 'COMPLETED' ? '#bbf7d0' : 'var(--border)'}`, borderRadius: 'var(--radius-md)', padding: '1.5rem 2rem' }}>
             <h4 className="text-xl font-bold m-0" style={{ color: vvk.status === 'COMPLETED' ? '#166534' : '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Итог ВВК</h4>
             <div style={{ 
               color: vvk.status === 'COMPLETED' ? '#15803d' : '#334155', 
