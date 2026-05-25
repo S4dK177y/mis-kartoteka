@@ -4,18 +4,21 @@ import { useAuth } from '../context/AuthContext';
 import { Loader2 } from 'lucide-react';
 
 const ProtectedRoute = ({ children, requireAdmin = false }) => {
-  const { user, loading, needsSetup } = useAuth();
+  const { user, loading, needsSetup, isLocked } = useAuth();
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="animate-spin text-primary" size={48} />
+      <div className="auth-background" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       </div>
     );
   }
 
   if (needsSetup) {
     return <Navigate to="/setup" replace />;
+  }
+
+  if (isLocked) {
+    return <Navigate to="/locked" replace />;
   }
 
   if (!user) {

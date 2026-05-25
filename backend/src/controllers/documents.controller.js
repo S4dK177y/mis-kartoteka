@@ -5,11 +5,17 @@ const prisma = require('../utils/prisma');
 const { logAction } = require('../utils/logger');
 const { JWT_SECRET } = require('../middlewares/auth');
 const { storageDir } = require('../middlewares/upload');
+const cryptoUtil = require('../utils/crypto');
+const crypto = require('crypto');
 
 exports.upload = async (req, res) => {
   try {
     const file = req.file;
     if (!file) return res.status(400).json({ error: 'No file uploaded' });
+    
+    file.originalname = Buffer.from(file.originalname, 'latin1').toString('utf8');
+    const sanitizedName = file.originalname.replace(/[^a-zA-Zа-яА-Я0-9.\-_ ]/g, '_');
+    const filename = Date.now() + '-' + Math.round(Math.random() * 1E9) + '-' + sanitizedName;
 
     let personId = null;
     if (req.params.patientId) {
@@ -22,7 +28,7 @@ exports.upload = async (req, res) => {
 
     const document = await prisma.document.create({
       data: {
-        filename: file.filename,
+        filename: filename,
         originalName: file.originalname,
         mimeType: file.mimetype,
         size: file.size,
@@ -33,7 +39,23 @@ exports.upload = async (req, res) => {
       }
     });
 
-    const entityId = req.params.patientId || req.params.consultationId;
+    const entityId = req.params.patientId || req.params.consultationId || 'unassigned';
+    
+    const entityDir = path.join(storageDir, entityId);
+    if (!fs.existsSync(entityDir)) fs.mkdirSync(entityDir, { recursive: true });
+    
+    const filePath = path.join(entityDir, filename);
+    const iv = crypto.randomBytes(12);
+    const cipher = crypto.createCipheriv('aes-256-gcm', cryptoUtil.getMasterKey(), iv);
+    
+    let encryptedFile = cipher.update(file.buffer);
+    encryptedFile = Buffer.concat([encryptedFile, cipher.final()]);
+    const authTag = cipher.getAuthTag();
+    
+    // Write IV + AuthTag + Encrypted Data to disk
+    const finalBuffer = Buffer.concat([iv, authTag, encryptedFile]);
+    fs.writeFileSync(filePath, finalBuffer);
+
     await logAction(req.user.id, 'UPLOAD', 'Document', document.id, { originalName: file.originalname, entityId });
     res.status(201).json(document);
   } catch (error) {
@@ -45,6 +67,10 @@ exports.uploadVvk = async (req, res) => {
   try {
     const file = req.file;
     if (!file) return res.status(400).json({ error: 'No file uploaded' });
+    
+    file.originalname = Buffer.from(file.originalname, 'latin1').toString('utf8');
+    const sanitizedName = file.originalname.replace(/[^a-zA-Zа-яА-Я0-9.\-_ ]/g, '_');
+    const filename = Date.now() + '-' + Math.round(Math.random() * 1E9) + '-' + sanitizedName;
 
     const consultationId = req.params.consultationId;
     const consultation = await prisma.consultation.findUnique({ where: { id: consultationId }, include: { vvkConclusion: true }});
@@ -58,7 +84,7 @@ exports.uploadVvk = async (req, res) => {
 
     const document = await prisma.document.create({
       data: {
-        filename: file.filename,
+        filename: filename,
         originalName: file.originalname,
         mimeType: file.mimetype,
         size: file.size,
@@ -79,6 +105,18 @@ exports.uploadVvk = async (req, res) => {
         documentId: document.id
       }
     });
+
+    const entityDir = path.join(storageDir, consultationId);
+    if (!fs.existsSync(entityDir)) fs.mkdirSync(entityDir, { recursive: true });
+    const filePath = path.join(entityDir, filename);
+    
+    const iv = crypto.randomBytes(12);
+    const cipher = crypto.createCipheriv('aes-256-gcm', cryptoUtil.getMasterKey(), iv);
+    let encryptedFile = cipher.update(file.buffer);
+    encryptedFile = Buffer.concat([encryptedFile, cipher.final()]);
+    const authTag = cipher.getAuthTag();
+    const finalBuffer = Buffer.concat([iv, authTag, encryptedFile]);
+    fs.writeFileSync(filePath, finalBuffer);
 
     await logAction(req.user.id, 'UPLOAD', 'Document VVK', document.id, { originalName: file.originalname, consultationId });
     res.status(201).json(document);
@@ -110,7 +148,33 @@ exports.download = async (req, res) => {
 
     res.setHeader('Content-Disposition', `${disposition}; filename="${encodeURIComponent(document.originalName)}"`);
     res.setHeader('Content-Type', document.mimeType);
-    res.sendFile(filePath);
+    
+    // Read and Decrypt
+    const fileBuffer = fs.readFileSync(filePath);
+    
+    // Very basic heuristic: if it's too small to contain IV and AuthTag or not encrypted, just send it (migration fallback)
+    if (fileBuffer.length < 28) {
+      return res.send(fileBuffer);
+    }
+    
+    // To properly differentiate between migrated encrypted files and raw files,
+    // we can either assume it's encrypted (if encryption is initialized) or check a magic signature.
+    // Assuming all new files are encrypted:
+    try {
+      const iv = fileBuffer.slice(0, 12);
+      const authTag = fileBuffer.slice(12, 28);
+      const encryptedData = fileBuffer.slice(28);
+      
+      const decipher = crypto.createDecipheriv('aes-256-gcm', cryptoUtil.getMasterKey(), iv);
+      decipher.setAuthTag(authTag);
+      let decrypted = decipher.update(encryptedData);
+      decrypted = Buffer.concat([decrypted, decipher.final()]);
+      
+      res.send(decrypted);
+    } catch (err) {
+      // Fallback for unencrypted files
+      res.sendFile(filePath);
+    }
   } catch (error) {
     res.status(500).json({ error: 'Internal Server Error' });
   }

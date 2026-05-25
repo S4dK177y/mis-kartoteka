@@ -15,6 +15,11 @@ const AdminPanel = () => {
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('users');
   
+  const [oldMasterPassword, setOldMasterPassword] = useState('');
+  const [newMasterPassword, setNewMasterPassword] = useState('');
+  const [confirmNewMasterPassword, setConfirmNewMasterPassword] = useState('');
+  const [changePasswordLoading, setChangePasswordLoading] = useState(false);
+  
   const [expandedLog, setExpandedLog] = useState(null);
   const [editingUserId, setEditingUserId] = useState(null);
   const [editingRole, setEditingRole] = useState('');
@@ -82,6 +87,29 @@ const AdminPanel = () => {
       alert('Ошибка при сохранении настроек');
     } finally {
       setSettingsLoading(false);
+    }
+  };
+
+  const handleChangeMasterPassword = async (e) => {
+    e.preventDefault();
+    if (newMasterPassword !== confirmNewMasterPassword) {
+      return alert('Новые пароли не совпадают!');
+    }
+    if (newMasterPassword.length < 6) {
+      return alert('Новый пароль должен быть не менее 6 символов');
+    }
+    
+    setChangePasswordLoading(true);
+    try {
+      await api.changeMasterPassword(oldMasterPassword, newMasterPassword);
+      alert('Мастер-пароль успешно изменен!');
+      setOldMasterPassword('');
+      setNewMasterPassword('');
+      setConfirmNewMasterPassword('');
+    } catch (err) {
+      alert(err.message || 'Ошибка при изменении мастер-пароля');
+    } finally {
+      setChangePasswordLoading(false);
     }
   };
 
@@ -273,6 +301,46 @@ const AdminPanel = () => {
               </div>
               <button className="btn btn-primary w-full" onClick={saveSettings} disabled={settingsLoading}>
                 {settingsLoading ? 'Сохранение...' : 'Сохранить настройки'}
+              </button>
+            </div>
+            
+            <div className="mt-6 pt-4 border-t">
+              <h4 className="font-bold text-sm text-muted uppercase tracking-wider mb-3 flex items-center gap-2"><Shield size={16} /> Безопасность</h4>
+              <form onSubmit={handleChangeMasterPassword} className="flex-col gap-3">
+                <div className="input-group mb-0">
+                  <input type="password" placeholder="Текущий мастер-пароль" className="input-field" value={oldMasterPassword} onChange={e => setOldMasterPassword(e.target.value)} required />
+                </div>
+                <div className="input-group mb-0">
+                  <input type="password" placeholder="Новый мастер-пароль" className="input-field" value={newMasterPassword} onChange={e => setNewMasterPassword(e.target.value)} required />
+                </div>
+                <div className="input-group mb-0">
+                  <input type="password" placeholder="Повторите новый пароль" className="input-field" value={confirmNewMasterPassword} onChange={e => setConfirmNewMasterPassword(e.target.value)} required />
+                </div>
+                <button type="submit" className="btn btn-primary w-full" disabled={changePasswordLoading} style={{ background: 'var(--danger)', borderColor: 'var(--danger)' }}>
+                  {changePasswordLoading ? 'Изменение...' : 'Изменить мастер-пароль'}
+                </button>
+              </form>
+            </div>
+
+            <div className="mt-6 pt-4 border-t">
+              <h4 className="font-bold text-sm text-muted uppercase tracking-wider mb-3">Миграция шифрования</h4>
+              <p className="text-xs text-muted mb-3" style={{ lineHeight: '1.4' }}>
+                Пройдет по всем пациентам и консультациям в базе и зашифрует старые данные, добавленные до версии 1.5.
+              </p>
+              <button 
+                className="btn btn-primary w-full" 
+                onClick={async () => {
+                  if (window.confirm('Запустить миграцию старых данных?')) {
+                    try {
+                      const res = await api.migrateEncryption();
+                      alert(res.message || 'Миграция успешно завершена!');
+                    } catch (err) {
+                      alert('Ошибка: ' + (err.message || 'Неизвестная ошибка'));
+                    }
+                  }
+                }}
+              >
+                Зашифровать старые данные
               </button>
             </div>
             

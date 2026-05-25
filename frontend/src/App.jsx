@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
-import { Activity, Plus, Settings, LogOut, Download, Menu, X } from 'lucide-react';
+import { Activity, Plus, Settings, LogOut, Download, Menu, X, Lock } from 'lucide-react';
 import { api } from './api';
 import PatientList from './pages/PatientList';
 import PatientForm from './pages/PatientForm';
@@ -12,18 +12,19 @@ import PersonList from './pages/PersonList';
 import PersonProfile from './pages/PersonProfile';
 import Login from './pages/Login';
 import Setup from './pages/Setup';
+import LockScreen from './pages/LockScreen';
 import AdminPanel from './pages/AdminPanel';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import './index.css';
 
 const Header = () => {
-  const { user, logout } = useAuth();
+  const { user, loading, isLocked, logout, lock } = useAuth();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  if (location.pathname === '/login' || location.pathname === '/setup') {
-    return null; // Hide header on auth pages
+  if (loading || isLocked || location.pathname === '/login' || location.pathname === '/setup' || location.pathname === '/locked') {
+    return null; // Hide header during loading, when locked, or on auth pages
   }
 
   return (
@@ -64,9 +65,14 @@ const Header = () => {
           
           <div className="header-user-actions" style={{ display: 'flex', gap: '8px', borderLeft: '1px solid var(--border)', paddingLeft: '1rem', marginLeft: '0.5rem' }}>
             {user?.role === 'ADMIN' && (
-              <Link to="/admin" className="btn btn-outline" style={{ border: 'none' }} title="Настройки системы" onClick={() => setMobileMenuOpen(false)}>
-                <Settings size={18} />
-              </Link>
+              <>
+                <button onClick={() => { lock(); setMobileMenuOpen(false); }} className="btn btn-outline" style={{ border: 'none', color: 'var(--primary)' }} title="Заблокировать систему">
+                  <Lock size={18} />
+                </button>
+                <Link to="/admin" className="btn btn-outline" style={{ border: 'none' }} title="Настройки системы" onClick={() => setMobileMenuOpen(false)}>
+                  <Settings size={18} />
+                </Link>
+              </>
             )}
             {user && (
               <button onClick={() => { logout(); setMobileMenuOpen(false); }} className="btn btn-outline" style={{ border: 'none', color: 'var(--text-muted)' }} title="Выйти">
@@ -88,6 +94,7 @@ const AppRoutes = () => {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/setup" element={<Setup />} />
+          <Route path="/locked" element={<LockScreen />} />
           
           <Route path="/" element={<ProtectedRoute><PatientList /></ProtectedRoute>} />
           <Route path="/consultations" element={<ProtectedRoute><ConsultationList /></ProtectedRoute>} />

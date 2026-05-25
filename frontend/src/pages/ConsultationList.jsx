@@ -77,8 +77,8 @@ export default function ConsultationList() {
   return (
     <div className="animate-fade-in flex-col" style={{ height: '100%' }}>
       <div className="flex justify-between items-end mb-4 gap-4 flex-wrap">
-        <div style={{ flex: 1, maxWidth: '400px' }}>
-          <div style={{ position: 'relative' }}>
+        <div style={{ flex: 1, minWidth: '400px' }}>
+          <div style={{ position: 'relative', width: '100%' }}>
             <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
             <input 
               type="text" 

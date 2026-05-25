@@ -74,16 +74,23 @@ exports.create = async (req, res) => {
 
     let finalPersonId = personId;
     if (!finalPersonId) {
-      const matchConditions = [];
-      if (tokenNumber && tokenNumber.trim() !== '') matchConditions.push({ tokenNumber: tokenNumber.trim() });
-      if (fullName && birthDate) matchConditions.push({ fullName: fullName.trim(), birthDate: new Date(birthDate) });
-      if (matchConditions.length > 0) {
-        let existing = await prisma.patient.findFirst({ where: { OR: matchConditions }, orderBy: { createdAt: 'desc' } });
+      if (tokenNumber && tokenNumber.trim() !== '') {
+        let existing = await prisma.patient.findFirst({ where: { tokenNumber: tokenNumber.trim() }, orderBy: { createdAt: 'desc' } });
+        if (!existing) existing = await prisma.consultation.findFirst({ where: { tokenNumber: tokenNumber.trim() }, orderBy: { createdAt: 'desc' } });
         if (existing && existing.personId) finalPersonId = existing.personId;
-        else {
-          existing = await prisma.consultation.findFirst({ where: { OR: matchConditions }, orderBy: { createdAt: 'desc' } });
-          if (existing && existing.personId) finalPersonId = existing.personId;
+      }
+      
+      if (!finalPersonId && fullName && birthDate) {
+        const bd = new Date(birthDate);
+        let existingPatients = await prisma.patient.findMany({ where: { birthDate: bd }, orderBy: { createdAt: 'desc' } });
+        let existing = existingPatients.find(p => p.fullName === fullName.trim());
+        
+        if (!existing) {
+          let existingCons = await prisma.consultation.findMany({ where: { birthDate: bd }, orderBy: { createdAt: 'desc' } });
+          existing = existingCons.find(c => c.fullName === fullName.trim());
         }
+        
+        if (existing && existing.personId) finalPersonId = existing.personId;
       }
       if (!finalPersonId) {
         const crypto = require('crypto');

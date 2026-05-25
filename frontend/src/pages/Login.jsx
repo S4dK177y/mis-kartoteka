@@ -18,7 +18,7 @@ const Login = () => {
 
     try {
       await login(username, password);
-      navigate('/');
+      window.location.href = '/';
     } catch (err) {
       setError(err.message || 'Ошибка авторизации. Проверьте логин и пароль.');
     } finally {

@@ -3,6 +3,8 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const cookieParser = require('cookie-parser');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const prisma = require('./utils/prisma');
 
 const authRoutes = require('./routes/auth.routes');
@@ -12,13 +14,29 @@ const consultationsRoutes = require('./routes/consultations.routes');
 const personsRoutes = require('./routes/persons.routes');
 const documentsRoutes = require('./routes/documents.routes');
 const exportRoutes = require('./routes/export.routes');
+const systemRoutes = require('./routes/system.routes');
+const cryptoUtil = require('./utils/crypto');
 
 const app = express();
 
 // Middleware
 app.use(cors({ origin: true, credentials: true }));
+app.use(helmet({
+  contentSecurityPolicy: false, // Too restrictive for local SPA
+  crossOriginEmbedderPolicy: false
+}));
 app.use(express.json());
 app.use(cookieParser());
+
+// Rate Limiter for auth and system (brute force protection)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: { error: 'Too many requests from this IP, please try again later.' }
+});
+
+app.use('/api/auth', authLimiter);
+app.use('/api/system/unlock', authLimiter);
 
 // Request logging middleware
 app.use((req, res, next) => {
@@ -40,16 +58,23 @@ app.use((req, res, next) => {
   next();
 });
 
-// API Routes
-app.get('/api/system/status', async (req, res) => {
-  try {
-    const count = await prisma.user.count();
-    res.json({ needsSetup: count === 0 });
-  } catch (err) {
-    res.json({ needsSetup: true });
+// Encryption Lock Middleware
+const checkLock = (req, res, next) => {
+  console.log('checkLock check:', req.originalUrl, 'isUnlocked:', cryptoUtil.isUnlocked());
+  if (req.originalUrl.startsWith('/api/auth') || req.originalUrl.startsWith('/api/system')) {
+    return next();
   }
-});
+  
+  if (req.originalUrl.startsWith('/api/') && !cryptoUtil.isUnlocked()) {
+    return res.status(423).json({ error: 'System is locked' });
+  }
+  
+  next();
+};
+app.use(checkLock);
 
+// API Routes
+app.use('/api/system', systemRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api', adminRoutes);
 app.use('/api/patients', patientsRoutes);

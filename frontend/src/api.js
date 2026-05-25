@@ -16,6 +16,14 @@ const fetchWithAuth = async (url, options = {}) => {
     throw new Error('Unauthorized');
   }
 
+  if (res.status === 423) {
+    // Locked - Master password required
+    if (window.location.pathname !== '/locked') {
+      window.location.href = '/locked';
+    }
+    throw new Error('System is locked');
+  }
+
   return res;
 };
 
@@ -34,6 +42,46 @@ export const api = {
       body: JSON.stringify({ username, password })
     });
     if (!res.ok) throw new Error('Setup failed');
+    return res.json();
+  },
+
+  // --- ENCRYPTION ---
+  unlockSystem: async (password) => {
+    const res = await fetchWithAuth(`${API_URL}/system/unlock`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password })
+    });
+    if (!res.ok) throw new Error('Неверный Мастер-пароль');
+    return res.json();
+  },
+
+  lockSystem: async () => {
+    const res = await fetchWithAuth(`${API_URL}/system/lock`, { method: 'POST' });
+    if (!res.ok) throw new Error('Failed to lock system');
+    return res.json();
+  },
+
+  changeMasterPassword: async (oldPassword, newPassword) => {
+    const res = await fetchWithAuth(`${API_URL}/system/change-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ oldPassword, newPassword })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to change master password');
+    }
+    return res.json();
+  },
+
+  setupEncryption: async (password) => {
+    const res = await fetchWithAuth(`${API_URL}/system/setup-encryption`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password })
+    });
+    if (!res.ok) throw new Error('Ошибка при установке пароля');
     return res.json();
   },
 
@@ -109,6 +157,12 @@ export const api = {
       body: JSON.stringify(settings)
     });
     if (!res.ok) throw new Error('Failed to update settings');
+    return res.json();
+  },
+
+  migrateEncryption: async () => {
+    const res = await fetchWithAuth(`${API_URL}/migrate-encryption`, { method: 'POST' });
+    if (!res.ok) throw new Error('Migration failed');
     return res.json();
   },
 

@@ -12,5 +12,6 @@ router.get('/logs/stats', authenticateToken, requireAdmin, adminController.getLo
 
 router.get('/settings', authenticateToken, requireAdmin, adminController.getSettings);
 router.put('/settings', authenticateToken, requireAdmin, adminController.updateSettings);
+router.post('/migrate-encryption', authenticateToken, requireAdmin, adminController.migrateEncryption);
 
 module.exports = router;

@@ -110,3 +110,77 @@ exports.updateSettings = async (req, res) => {
     res.status(500).json({ error: 'Failed to update settings' });
   }
 };
+
+exports.migrateEncryption = async (req, res) => {
+  try {
+    const patients = await prisma.patient.findMany();
+    let pCount = 0;
+    for (const p of patients) {
+      const dataToUpdate = {};
+      const fields = ['fullName', 'address', 'phoneNumber', 'relativeFullName', 'relativePhone', 'relativeAddress', 'dischargeDestination', 'admissionDiagnosis', 'clinicalDiagnosis', 'finalDiagnosis', 'complications', 'rank', 'militaryUnit', 'relativeRelation', 'caseHistoryNumber', 'tokenNumber'];
+      for (const f of fields) {
+        if (p[f] !== undefined && p[f] !== null) dataToUpdate[f] = p[f];
+      }
+      if (Object.keys(dataToUpdate).length > 0) {
+        await prisma.patient.update({ where: { id: p.id }, data: dataToUpdate });
+        pCount++;
+      }
+    }
+
+    const consultations = await prisma.consultation.findMany();
+    let cCount = 0;
+    for (const c of consultations) {
+      const dataToUpdate = {};
+      const fields = ['fullName', 'address', 'phoneNumber', 'relativeFullName', 'relativePhone', 'relativeAddress', 'diagnosis', 'notes', 'rank', 'militaryUnit', 'relativeRelation', 'tokenNumber'];
+      for (const f of fields) {
+        if (c[f] !== undefined && c[f] !== null) dataToUpdate[f] = c[f];
+      }
+      if (Object.keys(dataToUpdate).length > 0) {
+        await prisma.consultation.update({ where: { id: c.id }, data: dataToUpdate });
+        cCount++;
+      }
+    }
+
+    const users = await prisma.user.findMany();
+    let uCount = 0;
+    for (const u of users) {
+      if (u.username !== undefined && u.username !== null) {
+        await prisma.user.update({ where: { id: u.id }, data: { username: u.username } });
+        uCount++;
+      }
+    }
+
+    const documents = await prisma.document.findMany();
+    let dCount = 0;
+    for (const d of documents) {
+      const dataToUpdate = {};
+      if (d.originalName !== undefined && d.originalName !== null) dataToUpdate.originalName = d.originalName;
+      if (d.filename !== undefined && d.filename !== null) dataToUpdate.filename = d.filename;
+      
+      if (Object.keys(dataToUpdate).length > 0) {
+        await prisma.document.update({ where: { id: d.id }, data: dataToUpdate });
+        dCount++;
+      }
+    }
+
+    const vvkConclusions = await prisma.vvkConclusion.findMany();
+    let vCount = 0;
+    for (const v of vvkConclusions) {
+      const dataToUpdate = {};
+      const fields = ['neurologistCategory', 'ophthalmologistCategory', 'dentistCategory', 'surgeonCategory', 'therapistCategory', 'finalCategory'];
+      for (const f of fields) {
+        if (v[f] !== undefined && v[f] !== null) dataToUpdate[f] = v[f];
+      }
+      if (Object.keys(dataToUpdate).length > 0) {
+        await prisma.vvkConclusion.update({ where: { id: v.id }, data: dataToUpdate });
+        vCount++;
+      }
+    }
+    
+    await logAction(req.user.id, 'SYSTEM', 'Migration', 'Encryption', { patientsMigrated: pCount, consultationsMigrated: cCount, usersMigrated: uCount, documentsMigrated: dCount, vvkConclusionsMigrated: vCount });
+    res.json({ success: true, message: `Миграция завершена.\nПациентов: ${pCount}\nКонсультаций: ${cCount}\nВрачей: ${uCount}\nДокументов: ${dCount}\nВВК: ${vCount}` });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Migration failed.' });
+  }
+};
