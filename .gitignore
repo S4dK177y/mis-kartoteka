@@ -94,3 +94,7 @@ data/
 launcher/node_modules/
 launcher/dist/
 dist/
+
+# Agent Config
+.agents/*
+!.agents/rules/
