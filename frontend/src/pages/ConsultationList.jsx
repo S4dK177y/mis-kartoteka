@@ -9,7 +9,7 @@ export default function ConsultationList() {
   const navigate = useNavigate();
 
   // Filters
-  const [nameFilter, setNameFilter] = useState('');
+  const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState(''); // '', REGULAR, VVK
   const [serviceFilter, setServiceFilter] = useState('');
   const [diagnosisFilter, setDiagnosisFilter] = useState('');
@@ -51,8 +51,8 @@ export default function ConsultationList() {
 
   const getFilteredConsultations = () => {
     let result = consultations.filter(c => {
-      const nameStr = nameFilter.toLowerCase();
-      if (nameFilter && (!c.fullName || !c.fullName.toLowerCase().includes(nameStr))) return false;
+      const searchStr = search.toLowerCase();
+      if (searchStr && (!c.fullName || !c.fullName.toLowerCase().includes(searchStr))) return false;
       
       if (typeFilter && c.type !== typeFilter) return false;
 
@@ -97,8 +97,29 @@ export default function ConsultationList() {
 
   const filteredConsultations = getFilteredConsultations();
 
+  const uniqueServices = Array.from(new Set(consultations.map(c => c.militaryStatus || ''))).filter(Boolean).sort();
+  const uniqueDiagnoses = Array.from(new Set(consultations.map(c => c.diagnosis || c.notes || ''))).filter(Boolean).sort();
+  const uniqueDates = Array.from(new Set(consultations.map(c => c.consultationDate ? new Date(c.consultationDate).toISOString().split('T')[0] : ''))).filter(Boolean).sort();
+  const uniqueNextDates = Array.from(new Set(consultations.map(c => c.nextConsultationDate ? new Date(c.nextConsultationDate).toISOString().split('T')[0] : ''))).filter(Boolean).sort();
+
   return (
     <div className="animate-fade-in flex-col" style={{ height: '100%' }}>
+      <div className="flex justify-between items-end mb-4 gap-4 flex-wrap">
+        <div style={{ flex: 1 }}>
+          <div style={{ position: 'relative' }}>
+            <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+            <input 
+              type="text" 
+              className="input-field" 
+              placeholder="Поиск по ФИО..."
+              style={{ paddingLeft: '36px', marginBottom: 0, width: '100%' }}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+        </div>
+      </div>
+
       <div className="card table-wrapper" style={{ flex: 1 }}>
         {loading ? (
           <div className="p-6 text-center text-muted">Загрузка данных...</div>
@@ -112,27 +133,20 @@ export default function ConsultationList() {
                   <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }} className="flex items-center gap-1 cursor-pointer hover:text-primary" onClick={() => handleSort('fullName')}>
                     ФИО <SortIcon field="fullName" />
                   </div>
-                  <input 
-                    type="text" 
-                    placeholder="Фильтр..." 
-                    value={nameFilter}
-                    onChange={e => setNameFilter(e.target.value)}
-                    onClick={e => e.stopPropagation()}
-                    style={{ fontSize: '0.75rem', padding: '0.2rem 0.4rem', border: '1px solid var(--border)', borderRadius: '4px', width: '100%', outline: 'none', background: 'var(--bg-input)' }}
-                  />
                 </th>
                 <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', width: '110px' }}>
                   <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }}>
                     Служба
                   </div>
-                  <input 
-                    type="text" 
-                    placeholder="Фильтр..." 
+                  <select 
                     value={serviceFilter}
                     onChange={e => setServiceFilter(e.target.value)}
                     onClick={e => e.stopPropagation()}
                     style={{ fontSize: '0.75rem', padding: '0.2rem 0.4rem', border: '1px solid var(--border)', borderRadius: '4px', width: '100%', outline: 'none', background: 'var(--bg-input)' }}
-                  />
+                  >
+                    <option value="">Все</option>
+                    {uniqueServices.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
                 </th>
                 <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', width: '120px' }}>
                   <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }}>
@@ -153,38 +167,43 @@ export default function ConsultationList() {
                   <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }}>
                     Диагноз / Заключение
                   </div>
-                  <input 
-                    type="text" 
-                    placeholder="Фильтр..." 
+                  <select 
                     value={diagnosisFilter}
                     onChange={e => setDiagnosisFilter(e.target.value)}
                     onClick={e => e.stopPropagation()}
                     style={{ fontSize: '0.75rem', padding: '0.2rem 0.4rem', border: '1px solid var(--border)', borderRadius: '4px', width: '100%', outline: 'none', background: 'var(--bg-input)' }}
-                  />
+                  >
+                    <option value="">Все</option>
+                    {uniqueDiagnoses.map(d => <option key={d} value={d}>{d}</option>)}
+                  </select>
                 </th>
                 <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', width: '130px' }}>
                   <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }} className="flex items-center gap-1 cursor-pointer hover:text-primary" onClick={() => handleSort('consultationDate')}>
                     Дата приема <SortIcon field="consultationDate" />
                   </div>
-                  <input 
-                    type="date" 
+                  <select 
                     value={dateFilter}
                     onChange={e => setDateFilter(e.target.value)}
                     onClick={e => e.stopPropagation()}
                     style={{ fontSize: '0.75rem', padding: '0.2rem 0.4rem', border: '1px solid var(--border)', borderRadius: '4px', width: '100%', outline: 'none', background: 'var(--bg-input)' }}
-                  />
+                  >
+                    <option value="">Все</option>
+                    {uniqueDates.map(d => <option key={d} value={d}>{new Date(d).toLocaleDateString('ru-RU')}</option>)}
+                  </select>
                 </th>
                 <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', width: '130px' }}>
                   <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }} className="flex items-center gap-1 cursor-pointer hover:text-primary" onClick={() => handleSort('nextConsultationDate')}>
                     Следующий визит <SortIcon field="nextConsultationDate" />
                   </div>
-                  <input 
-                    type="date" 
+                  <select 
                     value={nextDateFilter}
                     onChange={e => setNextDateFilter(e.target.value)}
                     onClick={e => e.stopPropagation()}
                     style={{ fontSize: '0.75rem', padding: '0.2rem 0.4rem', border: '1px solid var(--border)', borderRadius: '4px', width: '100%', outline: 'none', background: 'var(--bg-input)' }}
-                  />
+                  >
+                    <option value="">Все</option>
+                    {uniqueNextDates.map(d => <option key={d} value={d}>{new Date(d).toLocaleDateString('ru-RU')}</option>)}
+                  </select>
                 </th>
               </tr>
             </thead>

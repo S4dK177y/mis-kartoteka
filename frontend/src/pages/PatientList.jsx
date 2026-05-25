@@ -10,7 +10,7 @@ export default function PatientList() {
   const navigate = useNavigate();
 
   // Filters
-  const [nameFilter, setNameFilter] = useState('');
+  const [search, setSearch] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [ibFilter, setIbFilter] = useState('');
@@ -57,8 +57,8 @@ export default function PatientList() {
 
   const getFilteredPatients = () => {
     let result = patients.filter(p => {
-      const nameStr = nameFilter.toLowerCase();
-      const matchesName = !nameFilter || (p.fullName && p.fullName.toLowerCase().includes(nameStr));
+      const searchStr = search.toLowerCase();
+      const matchesName = !searchStr || (p.fullName && p.fullName.toLowerCase().includes(searchStr));
       
       const matchesIb = !ibFilter || (p.caseHistoryNumber && p.caseHistoryNumber.includes(ibFilter));
       const matchesDep = !departmentFilter || p.department === departmentFilter;
@@ -101,8 +101,29 @@ export default function PatientList() {
 
   const filteredPatients = getFilteredPatients();
 
+  const uniqueIbs = Array.from(new Set(patients.map(p => p.caseHistoryNumber || ''))).filter(Boolean).sort();
+  const uniqueServices = Array.from(new Set(patients.map(p => p.isSvoParticipant ? 'СВО' : (p.militaryStatus || '')))).filter(Boolean).sort();
+  const uniqueDiagnoses = Array.from(new Set(patients.map(p => getDisplayDiagnosis(p)))).filter(d => d !== '—').sort();
+  const uniqueDates = Array.from(new Set(patients.map(p => p.admissionDate ? new Date(p.admissionDate).toISOString().split('T')[0] : ''))).filter(Boolean).sort();
+
   return (
     <div className="animate-fade-in flex-col" style={{ height: '100%' }}>
+      <div className="flex justify-between items-end mb-4 gap-4 flex-wrap">
+        <div style={{ flex: 1 }}>
+          <div style={{ position: 'relative' }}>
+            <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+            <input 
+              type="text" 
+              className="input-field" 
+              placeholder="Поиск по ФИО..."
+              style={{ paddingLeft: '36px', marginBottom: 0, width: '100%' }}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+        </div>
+      </div>
+
       <div className="card table-wrapper" style={{ flex: 1 }}>
         {loading ? (
           <div className="p-6 text-center text-muted">Загрузка данных...</div>
@@ -111,80 +132,96 @@ export default function PatientList() {
         ) : (
           <table>
             <thead>
-              <tr>
-                <th style={{ width: '120px' }}>
-                  <div className="flex-col gap-1">
-                    <span className="flex items-center gap-1 cursor-pointer select-none hover:text-primary" onClick={() => handleSort('caseHistoryNumber')}>
-                      № ИБ <SortIcon field="caseHistoryNumber" />
-                    </span>
-                    <input 
-                      type="text" 
-                      className="input-field" 
-                      style={{ padding: '0.2rem 0.4rem', fontSize: '0.7rem' }} 
-                      placeholder="Фильтр..." 
-                      value={ibFilter}
-                      onChange={e => setIbFilter(e.target.value)}
-                    />
+              <tr style={{ borderBottom: '2px solid var(--border)', position: 'sticky', top: 0, background: 'white', zIndex: 1 }}>
+                <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', width: '120px' }}>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }} className="flex items-center gap-1 cursor-pointer hover:text-primary" onClick={() => handleSort('caseHistoryNumber')}>
+                    № ИБ <SortIcon field="caseHistoryNumber" />
+                  </div>
+                  <select 
+                    value={ibFilter}
+                    onChange={e => setIbFilter(e.target.value)}
+                    onClick={e => e.stopPropagation()}
+                    style={{ fontSize: '0.75rem', padding: '0.2rem 0.4rem', border: '1px solid var(--border)', borderRadius: '4px', width: '100%', outline: 'none', background: 'var(--bg-input)' }}
+                  >
+                    <option value="">ВСЕ</option>
+                    {uniqueIbs.map(ib => <option key={ib} value={ib}>{ib}</option>)}
+                  </select>
+                </th>
+                <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left' }}>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }} className="flex items-center gap-1 cursor-pointer hover:text-primary" onClick={() => handleSort('fullName')}>
+                    ФИО <SortIcon field="fullName" />
                   </div>
                 </th>
-                <th>
-                  <div className="flex-col gap-1">
-                    <span className="flex items-center gap-1 cursor-pointer select-none hover:text-primary" onClick={() => handleSort('fullName')}>
-                      ФИО <SortIcon field="fullName" />
-                    </span>
+                <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', width: '110px' }}>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }}>
+                    Служба
                   </div>
+                  <select 
+                    value={serviceFilter}
+                    onChange={e => setServiceFilter(e.target.value)}
+                    onClick={e => e.stopPropagation()}
+                    style={{ fontSize: '0.75rem', padding: '0.2rem 0.4rem', border: '1px solid var(--border)', borderRadius: '4px', width: '100%', outline: 'none', background: 'var(--bg-input)' }}
+                  >
+                    <option value="">ВСЕ</option>
+                    {uniqueServices.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
                 </th>
-                <th>Служба</th>
-                <th>
-                  <div className="flex-col gap-1">
-                    <span className="flex items-center gap-1 cursor-pointer select-none hover:text-primary" onClick={() => handleSort('department')}>
-                      Отделение <SortIcon field="department" />
-                    </span>
-                    <select 
-                      value={departmentFilter} 
-                      onChange={e => setDepartmentFilter(e.target.value)}
-                      className="input-field"
-                      style={{ padding: '0.2rem 0.4rem', fontSize: '0.7rem', textTransform: 'uppercase', cursor: 'pointer' }}
-                    >
-                      <option value="">ВСЕ</option>
-                      {DEPARTMENTS.map(dep => <option key={dep} value={dep}>{dep.split(' ')[0]}</option>)}
-                    </select>
+                <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', width: '130px' }}>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }} className="flex items-center gap-1 cursor-pointer hover:text-primary" onClick={() => handleSort('department')}>
+                    Отделение <SortIcon field="department" />
                   </div>
+                  <select 
+                    value={departmentFilter} 
+                    onChange={e => setDepartmentFilter(e.target.value)}
+                    onClick={e => e.stopPropagation()}
+                    style={{ fontSize: '0.75rem', padding: '0.2rem 0.4rem', border: '1px solid var(--border)', borderRadius: '4px', width: '100%', outline: 'none', background: 'var(--bg-input)' }}
+                  >
+                    <option value="">ВСЕ</option>
+                    {DEPARTMENTS.map(dep => <option key={dep} value={dep}>{dep.split(' ')[0]}</option>)}
+                  </select>
                 </th>
-                <th>
-                  <div className="flex-col gap-1">
-                    <span>Диагноз</span>
-                    <input 
-                      type="text" 
-                      className="input-field" 
-                      style={{ padding: '0.2rem 0.4rem', fontSize: '0.7rem' }} 
-                      placeholder="Фильтр МКБ/текст..." 
-                      value={diagnosisFilter}
-                      onChange={e => setDiagnosisFilter(e.target.value)}
-                    />
+                <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left' }}>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }}>
+                    Диагноз
                   </div>
+                  <select 
+                    value={diagnosisFilter}
+                    onChange={e => setDiagnosisFilter(e.target.value)}
+                    onClick={e => e.stopPropagation()}
+                    style={{ fontSize: '0.75rem', padding: '0.2rem 0.4rem', border: '1px solid var(--border)', borderRadius: '4px', width: '100%', outline: 'none', background: 'var(--bg-input)' }}
+                  >
+                    <option value="">ВСЕ</option>
+                    {uniqueDiagnoses.map(d => <option key={d} value={d}>{d}</option>)}
+                  </select>
                 </th>
-                <th>
-                  <div className="flex-col gap-1">
-                    <span className="flex items-center gap-1 cursor-pointer select-none hover:text-primary" onClick={() => handleSort('admissionDate')}>
-                      Поступление <SortIcon field="admissionDate" />
-                    </span>
+                <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', width: '130px' }}>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }} className="flex items-center gap-1 cursor-pointer hover:text-primary" onClick={() => handleSort('admissionDate')}>
+                    Поступление <SortIcon field="admissionDate" />
                   </div>
+                  <select 
+                    value={dateFilter}
+                    onChange={e => setDateFilter(e.target.value)}
+                    onClick={e => e.stopPropagation()}
+                    style={{ fontSize: '0.75rem', padding: '0.2rem 0.4rem', border: '1px solid var(--border)', borderRadius: '4px', width: '100%', outline: 'none', background: 'var(--bg-input)' }}
+                  >
+                    <option value="">ВСЕ</option>
+                    {uniqueDates.map(d => <option key={d} value={d}>{new Date(d).toLocaleDateString('ru-RU')}</option>)}
+                  </select>
                 </th>
-                <th style={{ width: '120px' }}>
-                  <div className="flex-col gap-1">
-                    <span>Статус</span>
-                    <select 
-                      value={statusFilter} 
-                      onChange={e => setStatusFilter(e.target.value)}
-                      className="input-field"
-                      style={{ padding: '0.2rem 0.4rem', fontSize: '0.7rem', textTransform: 'uppercase', cursor: 'pointer' }}
-                    >
-                      <option value="">ВСЕ</option>
-                      <option value="На лечении">АКТИВНЫЕ</option>
-                      <option value="Выписан">ВЫПИСАНЫ</option>
-                    </select>
+                <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', width: '120px' }}>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }}>
+                    Статус
                   </div>
+                  <select 
+                    value={statusFilter} 
+                    onChange={e => setStatusFilter(e.target.value)}
+                    onClick={e => e.stopPropagation()}
+                    style={{ fontSize: '0.75rem', padding: '0.2rem 0.4rem', border: '1px solid var(--border)', borderRadius: '4px', width: '100%', outline: 'none', background: 'var(--bg-input)' }}
+                  >
+                    <option value="">ВСЕ</option>
+                    <option value="На лечении">АКТИВНЫЕ</option>
+                    <option value="Выписан">ВЫПИСАНЫ</option>
+                  </select>
                 </th>
               </tr>
             </thead>
