@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
-import { Activity, Plus, Settings, LogOut, Download } from 'lucide-react';
+import { Activity, Plus, Settings, LogOut, Download, Menu, X } from 'lucide-react';
 import { api } from './api';
 import PatientList from './pages/PatientList';
 import PatientForm from './pages/PatientForm';
@@ -19,6 +19,7 @@ import './index.css';
 const Header = () => {
   const { user, logout } = useAuth();
   const location = useLocation();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   if (location.pathname === '/login' || location.pathname === '/setup') {
     return null; // Hide header on auth pages
@@ -26,46 +27,52 @@ const Header = () => {
 
   return (
     <header className="header">
-      <div className="flex items-center gap-6 flex-wrap">
-        <Link to="/" className="header-logo">
+      <div className="header-top">
+        <Link to="/" className="header-logo" onClick={() => setMobileMenuOpen(false)}>
           <div style={{ background: 'var(--primary)', color: 'white', padding: '6px', borderRadius: '10px', display: 'flex' }}>
             <Activity size={24} />
           </div>
           МИС Картотека
         </Link>
-        <nav className="header-nav flex gap-4 flex-wrap" style={{ marginLeft: '1rem' }}>
-          <Link to="/" className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}>Стационар</Link>
-          <Link to="/consultations" className={`nav-link ${location.pathname.startsWith('/consultations') ? 'active' : ''}`}>Амбулатория</Link>
-          <Link to="/persons" className={`nav-link ${location.pathname.startsWith('/persons') ? 'active' : ''}`}>Все пациенты</Link>
-        </nav>
+        <button className="mobile-menu-btn" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+          {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+        </button>
       </div>
-      
-      <div className="flex gap-4 items-center flex-wrap">
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          <a href={api.exportPatientsUrl} className="btn btn-outline" download title="Экспорт в Excel (Стационар и Амбулатория)">
-            <Download size={18} /> Экспорт
-          </a>
-          <Link to="/patients/new" className="btn btn-primary" title="Новая госпитализация">
-            <Plus size={18} />
-            Госпитализация
-          </Link>
-          <Link to="/consultations/new" className="btn btn-secondary" title="Новая консультация">
-            <Plus size={18} />
-            Консультация
-          </Link>
-        </div>
+
+      <div className={`header-content ${mobileMenuOpen ? 'open' : ''}`}>
+        <nav className="header-nav flex gap-4" style={{ marginLeft: '1rem' }}>
+          <Link to="/" className={`nav-link ${location.pathname === '/' ? 'active' : ''}`} onClick={() => setMobileMenuOpen(false)}>Стационар</Link>
+          <Link to="/consultations" className={`nav-link ${location.pathname.startsWith('/consultations') ? 'active' : ''}`} onClick={() => setMobileMenuOpen(false)}>Амбулатория</Link>
+          <Link to="/persons" className={`nav-link ${location.pathname.startsWith('/persons') ? 'active' : ''}`} onClick={() => setMobileMenuOpen(false)}>Все пациенты</Link>
+        </nav>
         
-        <div style={{ display: 'flex', gap: '8px', borderLeft: '1px solid var(--border)', paddingLeft: '1rem', marginLeft: '0.5rem' }}>
-          {user?.role === 'ADMIN' && (
-            <Link to="/admin" className="btn btn-outline" style={{ border: 'none' }} title="Настройки системы">
-              <Settings size={18} />
+        <div className="header-actions flex gap-4 items-center">
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <a href={api.exportPatientsUrl} className="btn btn-outline" download title="Экспорт в Excel (Стационар и Амбулатория)">
+              <Download size={18} /> <span className="hide-on-mobile">Экспорт</span>
+            </a>
+            <Link to="/patients/new" className="btn btn-primary" title="Новая госпитализация" onClick={() => setMobileMenuOpen(false)}>
+              <Plus size={18} />
+              <span className="hide-on-mobile">Госпитализация</span>
             </Link>
-          )}
-          {user && (
-            <button onClick={logout} className="btn btn-outline" style={{ border: 'none', color: 'var(--text-muted)' }} title="Выйти">
-              <LogOut size={18} />
-            </button>
-          )}
+            <Link to="/consultations/new" className="btn btn-secondary" title="Новая консультация" onClick={() => setMobileMenuOpen(false)}>
+              <Plus size={18} />
+              <span className="hide-on-mobile">Консультация</span>
+            </Link>
+          </div>
+          
+          <div className="header-user-actions" style={{ display: 'flex', gap: '8px', borderLeft: '1px solid var(--border)', paddingLeft: '1rem', marginLeft: '0.5rem' }}>
+            {user?.role === 'ADMIN' && (
+              <Link to="/admin" className="btn btn-outline" style={{ border: 'none' }} title="Настройки системы" onClick={() => setMobileMenuOpen(false)}>
+                <Settings size={18} />
+              </Link>
+            )}
+            {user && (
+              <button onClick={() => { logout(); setMobileMenuOpen(false); }} className="btn btn-outline" style={{ border: 'none', color: 'var(--text-muted)' }} title="Выйти">
+                <LogOut size={18} />
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </header>
