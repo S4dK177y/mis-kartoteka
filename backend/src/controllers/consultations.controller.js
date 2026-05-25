@@ -172,7 +172,7 @@ exports.update = async (req, res) => {
       }
     });
 
-    await logAction(req.user.id, 'UPDATE', 'Consultation', consult.id, null);
+    await logAction(req.user.id, 'UPDATE', 'Consultation', consult.id, { fullName: consult.fullName, diagnosis: consult.diagnosis });
     res.json(consult);
   } catch (error) {
     res.status(400).json({ error: 'Bad Request' });

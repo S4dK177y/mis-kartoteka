@@ -37,17 +37,23 @@ exports.login = async (req, res) => {
     
     res.cookie('token', token, {
       httpOnly: true,
-      secure: false, // true in production with HTTPS
-      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+      secure: false,
+      maxAge: 7 * 24 * 60 * 60 * 1000
     });
     
+    await logAction(user.id, 'LOGIN', 'User', user.id, { username: user.username, role: user.role });
     res.json({ token, user: { id: user.id, username: user.username, role: user.role } });
   } catch (error) {
     res.status(500).json({ error: 'Server error' });
   }
 };
 
-exports.logout = (req, res) => {
+exports.logout = async (req, res) => {
+  try {
+    if (req.user) {
+      await logAction(req.user.id, 'LOGOUT', 'User', req.user.id, { username: req.user.username });
+    }
+  } catch (_) {}
   res.clearCookie('token');
   res.json({ success: true });
 };

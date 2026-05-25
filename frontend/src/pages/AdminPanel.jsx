@@ -1,70 +1,245 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../api';
-import { Shield, UserPlus, Users, Activity, ChevronDown, ChevronUp, Save, Settings as SettingsIcon } from 'lucide-react';
+import {
+  Shield, UserPlus, Users, Activity, Save, ChevronDown, ChevronUp,
+  Lock, Key, Trash2, UserCheck, LogIn, LogOut, FileUp, FileMinus,
+  Edit, ArrowLeftRight, Settings, AlertTriangle
+} from 'lucide-react';
+
+// --- Helpers ---
+
+const ACTION_META = {
+  CREATE:   { label: 'Создание',         color: '#166534', bg: '#dcfce7', icon: UserPlus },
+  UPDATE:   { label: 'Обновление',       color: '#92400e', bg: '#fef3c7', icon: Edit },
+  DELETE:   { label: 'Удаление',         color: '#991b1b', bg: '#fee2e2', icon: Trash2 },
+  UPLOAD:   { label: 'Загрузка файла',   color: '#1e3a8a', bg: '#dbeafe', icon: FileUp },
+  TRANSFER: { label: 'Перевод',          color: '#5b21b6', bg: '#ede9fe', icon: ArrowLeftRight },
+  LOGIN:    { label: 'Вход в систему',   color: '#065f46', bg: '#d1fae5', icon: LogIn },
+  LOGOUT:   { label: 'Выход из системы', color: '#374151', bg: '#f3f4f6', icon: LogOut },
+  SYSTEM:   { label: 'Системное',        color: '#1e3a8a', bg: '#dbeafe', icon: Settings },
+};
+
+const ENTITY_LABELS = {
+  Patient:      'Пациент',
+  Consultation: 'Консультация',
+  User:         'Пользователь',
+  Document:     'Документ',
+};
+
+const FIELD_LABELS = {
+  fullName:            'ФИО',
+  rank:                'Звание',
+  militaryUnit:        'В/ч',
+  militaryStatus:      'Статус службы',
+  department:          'Отделение',
+  status:              'Статус',
+  admissionDiagnosis:  'Диагноз при поступлении',
+  clinicalDiagnosis:   'Клинический диагноз',
+  finalDiagnosis:      'Заключительный диагноз',
+  complications:       'Осложнения',
+  dischargeDestination:'Место выписки',
+  dischargeDate:       'Дата выписки',
+  admissionDate:       'Дата поступления',
+  birthDate:           'Дата рождения',
+  caseHistoryNumber:   'Номер ИБ',
+  tokenNumber:         'Жетон',
+  isSvoParticipant:    'Участник СВО',
+  diagnosis:           'Диагноз',
+  username:            'Логин',
+  role:                'Роль',
+  newRole:             'Новая роль',
+};
+
+const formatFieldValue = (key, val) => {
+  if (val === null || val === undefined) return '—';
+  if (typeof val === 'boolean') return val ? 'Да' : 'Нет';
+  if (key.toLowerCase().includes('date') && typeof val === 'string' && val.includes('T')) {
+    return new Date(val).toLocaleString('ru-RU');
+  }
+  return String(val);
+};
+
+// --- Sub-components ---
+
+const Badge = ({ action }) => {
+  const meta = ACTION_META[action] || { label: action, color: '#374151', bg: '#f3f4f6' };
+  return (
+    <span style={{
+      background: meta.bg,
+      color: meta.color,
+      fontSize: '0.7rem',
+      fontWeight: 700,
+      padding: '0.2rem 0.55rem',
+      borderRadius: '6px',
+      letterSpacing: '0.03em',
+      textTransform: 'uppercase',
+      whiteSpace: 'nowrap',
+    }}>
+      {meta.label}
+    </span>
+  );
+};
+
+const LogDetails = ({ detailsStr }) => {
+  if (!detailsStr) return <span className="text-muted" style={{ fontSize: '0.8rem' }}>Детали отсутствуют</span>;
+  try {
+    const d = JSON.parse(detailsStr);
+    if (d.changes && typeof d.changes === 'object') {
+      return (
+        <div className="flex-col gap-2">
+          {Object.entries(d.changes).map(([field, vals]) => (
+            <div key={field} style={{ display: 'grid', gridTemplateColumns: '160px 1fr 18px 1fr', gap: '0.4rem', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600 }}>{FIELD_LABELS[field] || field}</span>
+              <span style={{ background: '#fee2e2', color: '#991b1b', padding: '0.15rem 0.45rem', borderRadius: '5px', fontSize: '0.78rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {formatFieldValue(field, vals?.old)}
+              </span>
+              <span style={{ color: 'var(--text-muted)', textAlign: 'center', fontSize: '0.8rem' }}>→</span>
+              <span style={{ background: '#dcfce7', color: '#166534', padding: '0.15rem 0.45rem', borderRadius: '5px', fontSize: '0.78rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {formatFieldValue(field, vals?.new)}
+              </span>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    // Flat key/value display
+    const filtered = Object.entries(d).filter(([k]) => k !== 'note');
+    if (filtered.length === 0) return <span className="text-muted" style={{ fontSize: '0.8rem' }}>Без деталей</span>;
+    return (
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+        {filtered.map(([k, v]) => (
+          <span key={k} style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: '6px', padding: '0.15rem 0.5rem', fontSize: '0.78rem' }}>
+            <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>{FIELD_LABELS[k] || k}: </span>
+            <span style={{ fontWeight: 500 }}>{formatFieldValue(k, v)}</span>
+          </span>
+        ))}
+      </div>
+    );
+  } catch {
+    return <span style={{ fontSize: '0.8rem' }}>{detailsStr}</span>;
+  }
+};
+
+const LogRow = ({ log }) => {
+  const [expanded, setExpanded] = useState(false);
+  const meta = ACTION_META[log.action] || {};
+  const Icon = meta.icon || Activity;
+
+  return (
+    <>
+      <tr
+        onClick={() => setExpanded(e => !e)}
+        style={{ cursor: 'pointer', borderBottom: expanded ? 'none' : '1px solid var(--border)' }}
+        className="hover:bg-surface-hover"
+      >
+        <td style={{ padding: '0.75rem 1rem', width: '36px' }}>
+          <div style={{
+            width: '30px', height: '30px', borderRadius: '8px',
+            background: meta.bg || '#f3f4f6',
+            display: 'flex', alignItems: 'center', justifyContent: 'center'
+          }}>
+            <Icon size={14} color={meta.color || '#374151'} />
+          </div>
+        </td>
+        <td style={{ padding: '0.75rem 0.5rem', whiteSpace: 'nowrap' }}>
+          <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-main)' }}>
+            {new Date(log.createdAt).toLocaleDateString('ru-RU')}
+          </div>
+          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+            {new Date(log.createdAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+          </div>
+        </td>
+        <td style={{ padding: '0.75rem 0.5rem' }}>
+          <span style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--primary)' }}>
+            {log.user?.username || 'Система'}
+          </span>
+        </td>
+        <td style={{ padding: '0.75rem 0.5rem' }}>
+          <Badge action={log.action} />
+        </td>
+        <td style={{ padding: '0.75rem 0.5rem' }}>
+          <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+            {ENTITY_LABELS[log.entity] || log.entity}
+          </span>
+        </td>
+        <td style={{ padding: '0.75rem 1rem', textAlign: 'right', color: 'var(--text-muted)' }}>
+          {expanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+        </td>
+      </tr>
+      {expanded && (
+        <tr style={{ borderBottom: '1px solid var(--border)' }}>
+          <td colSpan={6} style={{ padding: '0 1rem 1rem 1rem', background: 'var(--bg-input)' }}>
+            <LogDetails detailsStr={log.details} />
+          </td>
+        </tr>
+      )}
+    </>
+  );
+};
+
+// --- Main Component ---
 
 const AdminPanel = () => {
+  const [activeTab, setActiveTab] = useState('users');
+
+  // Users tab
   const [users, setUsers] = useState([]);
-  const [logs, setLogs] = useState([]);
-  const [logStats, setLogStats] = useState({ totalLogs: 0, exactBytes: 0 });
-  const [settings, setSettings] = useState({ logRetentionDays: '30', maxLogSpaceMb: '50' });
   const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
-  const [role, setRole] = useState('DOCTOR');
-  const [loading, setLoading] = useState(false);
-  const [settingsLoading, setSettingsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState('users');
-  
-  const [oldMasterPassword, setOldMasterPassword] = useState('');
-  const [newMasterPassword, setNewMasterPassword] = useState('');
-  const [confirmNewMasterPassword, setConfirmNewMasterPassword] = useState('');
-  const [changePasswordLoading, setChangePasswordLoading] = useState(false);
-  
-  const [expandedLog, setExpandedLog] = useState(null);
+  const [newRole, setNewRole] = useState('DOCTOR');
+  const [userLoading, setUserLoading] = useState(false);
+  const [userError, setUserError] = useState('');
   const [editingUserId, setEditingUserId] = useState(null);
   const [editingRole, setEditingRole] = useState('');
 
-  useEffect(() => {
-    fetchData();
-  }, [activeTab]);
+  // Security tab
+  const [oldMasterPassword, setOldMasterPassword] = useState('');
+  const [newMasterPassword, setNewMasterPassword] = useState('');
+  const [confirmNewMasterPassword, setConfirmNewMasterPassword] = useState('');
+  const [cpLoading, setCpLoading] = useState(false);
+  const [cpMessage, setCpMessage] = useState(null); // { type: 'success'|'error', text }
 
-  const fetchData = async () => {
-    try {
-      if (activeTab === 'users') {
-        const usersData = await api.getUsers();
-        setUsers(usersData);
-      } else if (activeTab === 'logs') {
-        const [logsData, statsData, settingsData] = await Promise.all([
-          api.getLogs(),
-          api.getLogStats(),
-          api.getSettings()
-        ]);
-        setLogs(logsData);
-        setLogStats(statsData);
-        if (settingsData.logRetentionDays) setSettings(prev => ({...prev, logRetentionDays: settingsData.logRetentionDays}));
-        if (settingsData.maxLogSpaceMb) setSettings(prev => ({...prev, maxLogSpaceMb: settingsData.maxLogSpaceMb}));
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
+  // Logs tab
+  const [logs, setLogs] = useState([]);
+  const [logStats, setLogStats] = useState({ totalLogs: 0, exactBytes: 0 });
+  const [settings, setSettings] = useState({ logRetentionDays: '30', maxLogSpaceMb: '50' });
+  const [settingsLoading, setSettingsLoading] = useState(false);
+  const [logFilter, setLogFilter] = useState('');
+  const [logActionFilter, setLogActionFilter] = useState('');
+
+  const fetchUsers = useCallback(async () => {
+    const data = await api.getUsers();
+    setUsers(data);
+  }, []);
+
+  const fetchLogs = useCallback(async () => {
+    const [logsData, statsData, settingsData] = await Promise.all([
+      api.getLogs(), api.getLogStats(), api.getSettings()
+    ]);
+    setLogs(logsData);
+    setLogStats(statsData);
+    if (settingsData.logRetentionDays) setSettings(p => ({ ...p, logRetentionDays: settingsData.logRetentionDays }));
+    if (settingsData.maxLogSpaceMb) setSettings(p => ({ ...p, maxLogSpaceMb: settingsData.maxLogSpaceMb }));
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'users') fetchUsers().catch(console.error);
+    if (activeTab === 'logs') fetchLogs().catch(console.error);
+  }, [activeTab]);
 
   const handleCreateUser = async (e) => {
     e.preventDefault();
-    if (newPassword.length < 6) {
-      return setError('Пароль должен быть не менее 6 символов');
-    }
-    setLoading(true);
-    setError('');
+    if (newPassword.length < 6) return setUserError('Пароль должен быть не менее 6 символов');
+    setUserLoading(true);
+    setUserError('');
     try {
-      await api.createUser(newUsername, newPassword, role);
-      setNewUsername('');
-      setNewPassword('');
-      fetchData();
+      await api.createUser(newUsername, newPassword, newRole);
+      setNewUsername(''); setNewPassword(''); setNewRole('DOCTOR');
+      fetchUsers();
     } catch (err) {
-      setError(err.message || 'Ошибка создания пользователя');
+      setUserError(err.message || 'Ошибка создания пользователя');
     } finally {
-      setLoading(false);
+      setUserLoading(false);
     }
   };
 
@@ -72,9 +247,26 @@ const AdminPanel = () => {
     try {
       await api.updateUserRole(userId, editingRole);
       setEditingUserId(null);
-      fetchData();
-    } catch (err) {
+      fetchUsers();
+    } catch {
       alert('Ошибка при изменении роли');
+    }
+  };
+
+  const handleChangeMasterPassword = async (e) => {
+    e.preventDefault();
+    setCpMessage(null);
+    if (newMasterPassword !== confirmNewMasterPassword) return setCpMessage({ type: 'error', text: 'Новые пароли не совпадают' });
+    if (newMasterPassword.length < 6) return setCpMessage({ type: 'error', text: 'Новый пароль должен быть не менее 6 символов' });
+    setCpLoading(true);
+    try {
+      await api.changeMasterPassword(oldMasterPassword, newMasterPassword);
+      setCpMessage({ type: 'success', text: 'Мастер-пароль успешно изменён. Следующая разблокировка потребует новый пароль.' });
+      setOldMasterPassword(''); setNewMasterPassword(''); setConfirmNewMasterPassword('');
+    } catch (err) {
+      setCpMessage({ type: 'error', text: err.message || 'Ошибка при смене мастер-пароля' });
+    } finally {
+      setCpLoading(false);
     }
   };
 
@@ -83,139 +275,62 @@ const AdminPanel = () => {
     try {
       await api.updateSettings(settings);
       alert('Настройки успешно сохранены');
-    } catch (err) {
+    } catch {
       alert('Ошибка при сохранении настроек');
     } finally {
       setSettingsLoading(false);
     }
   };
 
-  const handleChangeMasterPassword = async (e) => {
-    e.preventDefault();
-    if (newMasterPassword !== confirmNewMasterPassword) {
-      return alert('Новые пароли не совпадают!');
-    }
-    if (newMasterPassword.length < 6) {
-      return alert('Новый пароль должен быть не менее 6 символов');
-    }
-    
-    setChangePasswordLoading(true);
-    try {
-      await api.changeMasterPassword(oldMasterPassword, newMasterPassword);
-      alert('Мастер-пароль успешно изменен!');
-      setOldMasterPassword('');
-      setNewMasterPassword('');
-      setConfirmNewMasterPassword('');
-    } catch (err) {
-      alert(err.message || 'Ошибка при изменении мастер-пароля');
-    } finally {
-      setChangePasswordLoading(false);
-    }
-  };
+  const filteredLogs = logs.filter(log => {
+    const matchAction = !logActionFilter || log.action === logActionFilter;
+    const matchText = !logFilter || (log.user?.username || '').toLowerCase().includes(logFilter.toLowerCase())
+      || (log.entity || '').toLowerCase().includes(logFilter.toLowerCase());
+    return matchAction && matchText;
+  });
 
-  const formatLogAction = (log) => {
-    const actionMap = {
-      'CREATE': 'Создание',
-      'UPDATE': 'Обновление',
-      'DELETE': 'Удаление',
-      'UPLOAD': 'Загрузка файла'
-    };
-    const entityMap = {
-      'Patient': 'карточки пациента',
-      'User': 'пользователя',
-      'Document': 'документа',
-      'Consultation': 'консультации'
-    };
-    const actionText = actionMap[log.action] || log.action;
-    const entityText = entityMap[log.entity] || log.entity;
-    
-    return `${actionText} ${entityText}`;
-  };
-
-  const translateField = (field) => {
-    const dict = {
-      role: 'Роль',
-      username: 'Логин',
-      status: 'Статус',
-      department: 'Отделение',
-      fullName: 'ФИО',
-      dischargeDate: 'Дата выписки',
-      finalDiagnosis: 'Закл. диагноз'
-    };
-    return dict[field] || field;
-  };
-
-  const formatLogDetails = (detailsStr) => {
-    try {
-      const details = JSON.parse(detailsStr);
-      
-      // If it's a simple changes object
-      if (details.changes) {
-        return (
-          <div className="flex-col gap-2">
-            {Object.entries(details.changes).map(([field, vals]) => (
-              <div key={field} style={{ display: 'grid', gridTemplateColumns: '150px 1fr 20px 1fr', gap: '0.5rem', alignItems: 'center', fontSize: '0.85rem' }}>
-                <span className="font-medium text-muted">{translateField(field)}:</span>
-                <span style={{ background: '#fee2e2', color: '#991b1b', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>{String(vals.old || '—')}</span>
-                <span className="text-muted text-center">➔</span>
-                <span style={{ background: '#dcfce7', color: '#166534', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>{String(vals.new || '—')}</span>
-              </div>
-            ))}
-          </div>
-        );
-      }
-      
-      // If it's a creation details
-      if (details.username || details.fullName) {
-        return (
-          <div className="flex-col gap-1">
-            {Object.entries(details).map(([k, v]) => (
-              <div key={k} className="text-sm">
-                <span className="text-muted">{translateField(k)}: </span>
-                <span className="font-medium">{String(v)}</span>
-              </div>
-            ))}
-          </div>
-        );
-      }
-
-      return (
-        <pre style={{ background: 'white', padding: '1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', fontSize: '0.85rem', overflowX: 'auto', whiteSpace: 'pre-wrap', color: 'var(--text-main)', margin: 0 }}>
-          {JSON.stringify(details, null, 2)}
-        </pre>
-      );
-    } catch (e) {
-      return <span>{detailsStr}</span>;
-    }
-  };
+  const TAB_BTN = (id, label, Icon) => (
+    <button
+      className={`btn ${activeTab === id ? 'btn-primary' : 'btn-outline'}`}
+      onClick={() => setActiveTab(id)}
+      style={{ gap: '0.4rem' }}
+    >
+      <Icon size={16} /> {label}
+    </button>
+  );
 
   return (
-    <div className="animate-fade-in" style={{ width: '100%', margin: '0 auto' }}>
+    <div className="animate-fade-in" style={{ width: '100%' }}>
+      {/* Header */}
       <div className="flex items-center gap-3 mb-6">
-        <Shield size={32} className="text-primary" />
-        <h1 className="text-2xl font-bold m-0 text-primary">Панель администратора</h1>
+        <Shield size={28} className="text-primary" />
+        <h1 className="text-2xl font-bold m-0" style={{ color: 'var(--primary)' }}>Панель администратора</h1>
       </div>
 
-      <div className="flex gap-4 mb-6">
-        <button className={`btn ${activeTab === 'users' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setActiveTab('users')}>
-          <Users size={18} /> Пользователи
-        </button>
-        <button className={`btn ${activeTab === 'logs' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setActiveTab('logs')}>
-          <Activity size={18} /> Логи системы
-        </button>
+      {/* Tabs */}
+      <div className="flex gap-3 mb-6">
+        {TAB_BTN('users', 'Пользователи', Users)}
+        {TAB_BTN('security', 'Безопасность', Lock)}
+        {TAB_BTN('logs', 'Журнал аудита', Activity)}
       </div>
 
+      {/* ======== USERS TAB ======== */}
       {activeTab === 'users' && (
-        <div className="grid-layout-admin">
-          <div className="card p-6" style={{ alignSelf: 'start' }}>
-            <h3 className="text-xl font-bold mb-5 flex items-center gap-2 text-primary"><UserPlus size={20} /> Добавить пользователя</h3>
-            
-            {error && <div className="bg-danger text-white p-3 rounded-md mb-5 text-sm font-medium text-center">{error}</div>}
-            
+        <div style={{ display: 'grid', gridTemplateColumns: '340px 1fr', gap: '1.5rem', alignItems: 'start' }}>
+          {/* Create user form */}
+          <div className="card p-6">
+            <h3 className="font-bold text-lg mb-5 flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
+              <UserPlus size={18} /> Добавить пользователя
+            </h3>
+            {userError && (
+              <div className="mb-4 p-3 text-sm" style={{ background: 'var(--danger-light)', color: 'var(--danger)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--danger)' }}>
+                {userError}
+              </div>
+            )}
             <form onSubmit={handleCreateUser} className="flex-col gap-4">
               <div className="input-group">
-                <label className="input-label">Имя пользователя (Логин)</label>
-                <input type="text" className="input-field" value={newUsername} onChange={e => setNewUsername(e.target.value)} required />
+                <label className="input-label">Логин</label>
+                <input type="text" className="input-field" value={newUsername} onChange={e => setNewUsername(e.target.value)} required placeholder="Введите логин" />
               </div>
               <div className="input-group">
                 <label className="input-label">Пароль</label>
@@ -223,203 +338,253 @@ const AdminPanel = () => {
               </div>
               <div className="input-group">
                 <label className="input-label">Роль</label>
-                <select className="input-field" value={role} onChange={e => setRole(e.target.value)}>
+                <select className="input-field" value={newRole} onChange={e => setNewRole(e.target.value)}>
                   <option value="DOCTOR">Врач (DOCTOR)</option>
                   <option value="ADMIN">Администратор (ADMIN)</option>
                 </select>
               </div>
-              <button type="submit" className="btn btn-primary mt-4 w-full" style={{ padding: '0.75rem' }} disabled={loading}>
-                {loading ? 'Создание...' : 'Создать пользователя'}
+              <button type="submit" className="btn btn-primary w-full mt-2" style={{ padding: '0.7rem' }} disabled={userLoading}>
+                {userLoading ? 'Создание...' : 'Создать пользователя'}
               </button>
             </form>
           </div>
 
-          <div className="card flex-col" style={{ height: 'calc(100vh - 12rem)', minHeight: '500px' }}>
-            <div className="p-6 border-b" style={{ background: '#f8fafc' }}>
-              <h3 className="text-xl font-bold m-0 text-primary">Список пользователей</h3>
+          {/* Users list */}
+          <div className="card" style={{ overflow: 'hidden' }}>
+            <div className="p-5 border-b" style={{ background: 'var(--bg-input)' }}>
+              <h3 className="font-bold text-lg m-0" style={{ color: 'var(--text-main)' }}>Список пользователей</h3>
             </div>
-            <div style={{ overflowY: 'auto', flex: 1, padding: '1rem' }}>
-              <table className="table" style={{ borderCollapse: 'separate', borderSpacing: '0 0.5rem' }}>
-                <thead>
-                  <tr>
-                    <th style={{ background: 'transparent', borderBottom: '2px solid var(--border)' }}>Пользователь</th>
-                    <th style={{ background: 'transparent', borderBottom: '2px solid var(--border)' }}>Роль</th>
-                    <th style={{ background: 'transparent', borderBottom: '2px solid var(--border)' }}>Создан</th>
-                    <th style={{ background: 'transparent', borderBottom: '2px solid var(--border)', textAlign: 'right' }}>Действия</th>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ borderBottom: '2px solid var(--border)' }}>
+                  <th style={{ padding: '0.7rem 1rem', textAlign: 'left', fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Логин</th>
+                  <th style={{ padding: '0.7rem 1rem', textAlign: 'left', fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Роль</th>
+                  <th style={{ padding: '0.7rem 1rem', textAlign: 'left', fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Добавлен</th>
+                  <th style={{ padding: '0.7rem 1rem', textAlign: 'right', fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Действия</th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map(u => (
+                  <tr key={u.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                    <td style={{ padding: '0.85rem 1rem', fontWeight: 600, fontSize: '0.9rem' }}>
+                      <div className="flex items-center gap-2">
+                        <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: u.role === 'ADMIN' ? 'var(--primary-light)' : 'var(--bg-input)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          {u.role === 'ADMIN' ? <Shield size={14} color="var(--primary)" /> : <UserCheck size={14} color="var(--text-muted)" />}
+                        </div>
+                        {u.username}
+                      </div>
+                    </td>
+                    <td style={{ padding: '0.85rem 1rem' }}>
+                      {editingUserId === u.id ? (
+                        <select className="input-field" style={{ padding: '0.2rem 0.5rem', width: 'auto', fontSize: '0.82rem' }} value={editingRole} onChange={e => setEditingRole(e.target.value)}>
+                          <option value="DOCTOR">DOCTOR</option>
+                          <option value="ADMIN">ADMIN</option>
+                        </select>
+                      ) : (
+                        <span style={{ background: u.role === 'ADMIN' ? 'var(--primary-light)' : 'var(--bg-input)', color: u.role === 'ADMIN' ? 'var(--primary)' : 'var(--text-muted)', border: '1px solid var(--border)', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700 }}>
+                          {u.role}
+                        </span>
+                      )}
+                    </td>
+                    <td style={{ padding: '0.85rem 1rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                      {new Date(u.createdAt).toLocaleDateString('ru-RU')}
+                    </td>
+                    <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
+                      {editingUserId === u.id ? (
+                        <div className="flex gap-2 justify-end">
+                          <button className="btn btn-outline" style={{ padding: '0.2rem 0.6rem', fontSize: '0.8rem' }} onClick={() => setEditingUserId(null)}>Отмена</button>
+                          <button className="btn btn-primary" style={{ padding: '0.2rem 0.6rem', fontSize: '0.8rem' }} onClick={() => handleUpdateRole(u.id)}>
+                            <Save size={13} /> Сохранить
+                          </button>
+                        </div>
+                      ) : (
+                        <button className="btn btn-outline" style={{ padding: '0.2rem 0.6rem', fontSize: '0.8rem' }} onClick={() => { setEditingUserId(u.id); setEditingRole(u.role); }}>
+                          Изменить роль
+                        </button>
+                      )}
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {users.map(u => (
-                    <tr key={u.id} style={{ background: 'white', boxShadow: 'var(--shadow-sm)', borderRadius: 'var(--radius-sm)' }}>
-                      <td className="font-bold p-4" style={{ borderRadius: 'var(--radius-sm) 0 0 var(--radius-sm)' }}>{u.username}</td>
-                      <td className="p-4">
-                        {editingUserId === u.id ? (
-                          <div className="flex gap-2 items-center">
-                            <select className="input-field" style={{ padding: '0.2rem 0.5rem', width: 'auto' }} value={editingRole} onChange={e => setEditingRole(e.target.value)}>
-                              <option value="DOCTOR">DOCTOR</option>
-                              <option value="ADMIN">ADMIN</option>
-                            </select>
-                          </div>
-                        ) : (
-                          <span className="badge" style={{ background: u.role === 'ADMIN' ? 'var(--primary-light)' : 'var(--bg-input)', border: '1px solid var(--border)' }}>
-                            {u.role}
-                          </span>
-                        )}
-                      </td>
-                      <td className="text-muted text-sm p-4">{new Date(u.createdAt).toLocaleDateString()}</td>
-                      <td className="p-4 text-right" style={{ borderRadius: '0 var(--radius-sm) var(--radius-sm) 0' }}>
-                        {editingUserId === u.id ? (
-                          <div className="flex gap-2 justify-end">
-                            <button className="btn btn-outline" style={{ padding: '0.2rem 0.5rem' }} onClick={() => setEditingUserId(null)}>Отмена</button>
-                            <button className="btn btn-primary" style={{ padding: '0.2rem 0.5rem' }} onClick={() => handleUpdateRole(u.id)}><Save size={14} /> Сохранить</button>
-                          </div>
-                        ) : (
-                          <button className="btn btn-outline text-xs" style={{ padding: '0.2rem 0.6rem' }} onClick={() => { setEditingUserId(u.id); setEditingRole(u.role); }}>Изменить роль</button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                ))}
+                {users.length === 0 && (
+                  <tr><td colSpan={4} className="text-center p-8 text-muted">Пользователи не найдены</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ======== SECURITY TAB ======== */}
+      {activeTab === 'security' && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', alignItems: 'start' }}>
+          {/* Change master password */}
+          <div className="card p-6">
+            <h3 className="font-bold text-lg mb-2 flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
+              <Key size={18} /> Смена Мастер-пароля
+            </h3>
+            <p className="text-sm text-muted mb-5" style={{ lineHeight: 1.6 }}>
+              Используется алгоритм конвертного шифрования (Envelope Encryption). Все данные базы при этом остаются нетронутыми — меняется только ключ доступа к ключу шифрования.
+            </p>
+            {cpMessage && (
+              <div className="mb-4 p-3 text-sm" style={{
+                background: cpMessage.type === 'success' ? '#dcfce7' : 'var(--danger-light)',
+                color: cpMessage.type === 'success' ? '#166534' : 'var(--danger)',
+                borderRadius: 'var(--radius-sm)',
+                border: `1px solid ${cpMessage.type === 'success' ? '#86efac' : 'var(--danger)'}`,
+                lineHeight: 1.5
+              }}>
+                {cpMessage.text}
+              </div>
+            )}
+            <form onSubmit={handleChangeMasterPassword} className="flex-col gap-4">
+              <div className="input-group">
+                <label className="input-label">Текущий мастер-пароль</label>
+                <input type="password" className="input-field" value={oldMasterPassword} onChange={e => setOldMasterPassword(e.target.value)} required placeholder="••••••••" autoComplete="current-password" />
+              </div>
+              <div className="input-group">
+                <label className="input-label">Новый мастер-пароль</label>
+                <input type="password" className="input-field" value={newMasterPassword} onChange={e => setNewMasterPassword(e.target.value)} required placeholder="Минимум 6 символов" autoComplete="new-password" />
+              </div>
+              <div className="input-group">
+                <label className="input-label">Повторите новый пароль</label>
+                <input type="password" className="input-field" value={confirmNewMasterPassword} onChange={e => setConfirmNewMasterPassword(e.target.value)} required placeholder="Повторите новый пароль" autoComplete="new-password" />
+              </div>
+              <button type="submit" className="btn btn-primary w-full" style={{ padding: '0.7rem', background: 'var(--danger)', borderColor: 'var(--danger)' }} disabled={cpLoading}>
+                {cpLoading ? 'Применение...' : 'Изменить мастер-пароль'}
+              </button>
+            </form>
+          </div>
+
+          {/* Encryption info */}
+          <div className="flex-col gap-4">
+            <div className="card p-5" style={{ border: '1px solid #bfdbfe', background: '#eff6ff' }}>
+              <h4 className="font-bold text-sm mb-3 flex items-center gap-2" style={{ color: '#1e3a8a' }}>
+                <Shield size={16} /> О системе шифрования
+              </h4>
+              <div className="flex-col gap-2">
+                {[
+                  ['Алгоритм', 'AES-256-GCM'],
+                  ['Производная ключа', 'PBKDF2 (100 000 итераций)'],
+                  ['Детерминированное шифрование', 'HMAC-SHA256 IV'],
+                  ['Шифрование ключа (KEK)', 'Envelope Encryption'],
+                  ['Ключ в памяти', 'RAM only — не сохраняется на диске'],
+                ].map(([k, v]) => (
+                  <div key={k} className="flex justify-between" style={{ borderBottom: '1px solid #bfdbfe', paddingBottom: '0.3rem' }}>
+                    <span style={{ fontSize: '0.8rem', color: '#3b82f6', fontWeight: 600 }}>{k}</span>
+                    <span style={{ fontSize: '0.8rem', color: '#1e3a8a', fontWeight: 700 }}>{v}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="card p-5" style={{ border: '1px solid #fde68a', background: '#fffbeb' }}>
+              <h4 className="font-bold text-sm mb-2 flex items-center gap-2" style={{ color: '#92400e' }}>
+                <AlertTriangle size={16} /> Важно знать
+              </h4>
+              <ul className="flex-col gap-1" style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                {[
+                  'Если мастер-пароль будет утерян — данные невозможно восстановить.',
+                  'При перезапуске сервера система блокируется и требует повторного ввода пароля.',
+                  'Принудительная блокировка доступна через иконку замка в шапке интерфейса.',
+                ].map((t, i) => (
+                  <li key={i} style={{ fontSize: '0.8rem', color: '#92400e', lineHeight: 1.5, paddingLeft: '0.5rem', borderLeft: '2px solid #fbbf24' }}>
+                    {t}
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
         </div>
       )}
 
+      {/* ======== LOGS TAB ======== */}
       {activeTab === 'logs' && (
-        <div className="grid-layout-admin" style={{ gridTemplateColumns: '300px 1fr' }}>
-          <div className="card p-6" style={{ alignSelf: 'start' }}>
-            <h3 className="text-xl font-bold mb-4 flex items-center gap-2 text-primary"><SettingsIcon size={20} /> Настройки логов</h3>
-            <div className="flex-col gap-4">
-              <div className="input-group">
-                <label className="input-label">Хранить логи (дней)</label>
-                <input type="number" className="input-field" value={settings.logRetentionDays} onChange={e => setSettings({...settings, logRetentionDays: e.target.value})} />
+        <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: '1.5rem', alignItems: 'start' }}>
+          {/* Sidebar */}
+          <div className="flex-col gap-4">
+            {/* Filters */}
+            <div className="card p-5">
+              <h4 className="font-bold text-sm mb-4 uppercase tracking-wider text-muted">Фильтры</h4>
+              <div className="flex-col gap-3">
+                <div className="input-group mb-0">
+                  <label className="input-label">Пользователь / объект</label>
+                  <input type="text" className="input-field" placeholder="Поиск..." value={logFilter} onChange={e => setLogFilter(e.target.value)} />
+                </div>
+                <div className="input-group mb-0">
+                  <label className="input-label">Тип действия</label>
+                  <select className="input-field" value={logActionFilter} onChange={e => setLogActionFilter(e.target.value)}>
+                    <option value="">Все</option>
+                    {Object.entries(ACTION_META).map(([k, v]) => (
+                      <option key={k} value={k}>{v.label}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
-              <div className="input-group">
-                <label className="input-label">Лимит места (МБ)</label>
-                <input type="number" className="input-field" value={settings.maxLogSpaceMb} onChange={e => setSettings({...settings, maxLogSpaceMb: e.target.value})} />
-              </div>
-              <button className="btn btn-primary w-full" onClick={saveSettings} disabled={settingsLoading}>
-                {settingsLoading ? 'Сохранение...' : 'Сохранить настройки'}
-              </button>
-            </div>
-            
-            <div className="mt-6 pt-4 border-t">
-              <h4 className="font-bold text-sm text-muted uppercase tracking-wider mb-3 flex items-center gap-2"><Shield size={16} /> Безопасность</h4>
-              <form onSubmit={handleChangeMasterPassword} className="flex-col gap-3">
-                <div className="input-group mb-0">
-                  <input type="password" placeholder="Текущий мастер-пароль" className="input-field" value={oldMasterPassword} onChange={e => setOldMasterPassword(e.target.value)} required />
-                </div>
-                <div className="input-group mb-0">
-                  <input type="password" placeholder="Новый мастер-пароль" className="input-field" value={newMasterPassword} onChange={e => setNewMasterPassword(e.target.value)} required />
-                </div>
-                <div className="input-group mb-0">
-                  <input type="password" placeholder="Повторите новый пароль" className="input-field" value={confirmNewMasterPassword} onChange={e => setConfirmNewMasterPassword(e.target.value)} required />
-                </div>
-                <button type="submit" className="btn btn-primary w-full" disabled={changePasswordLoading} style={{ background: 'var(--danger)', borderColor: 'var(--danger)' }}>
-                  {changePasswordLoading ? 'Изменение...' : 'Изменить мастер-пароль'}
-                </button>
-              </form>
             </div>
 
-            <div className="mt-6 pt-4 border-t">
-              <h4 className="font-bold text-sm text-muted uppercase tracking-wider mb-3">Миграция шифрования</h4>
-              <p className="text-xs text-muted mb-3" style={{ lineHeight: '1.4' }}>
-                Пройдет по всем пациентам и консультациям в базе и зашифрует старые данные, добавленные до версии 1.5.
-              </p>
-              <button 
-                className="btn btn-primary w-full" 
-                onClick={async () => {
-                  if (window.confirm('Запустить миграцию старых данных?')) {
-                    try {
-                      const res = await api.migrateEncryption();
-                      alert(res.message || 'Миграция успешно завершена!');
-                    } catch (err) {
-                      alert('Ошибка: ' + (err.message || 'Неизвестная ошибка'));
-                    }
-                  }
-                }}
-              >
-                Зашифровать старые данные
-              </button>
+            {/* Log settings */}
+            <div className="card p-5">
+              <h4 className="font-bold text-sm mb-4 uppercase tracking-wider text-muted">Настройки логов</h4>
+              <div className="flex-col gap-3">
+                <div className="input-group mb-0">
+                  <label className="input-label">Хранить логи (дней)</label>
+                  <input type="number" className="input-field" value={settings.logRetentionDays} onChange={e => setSettings({ ...settings, logRetentionDays: e.target.value })} />
+                </div>
+                <div className="input-group mb-0">
+                  <label className="input-label">Лимит места (МБ)</label>
+                  <input type="number" className="input-field" value={settings.maxLogSpaceMb} onChange={e => setSettings({ ...settings, maxLogSpaceMb: e.target.value })} />
+                </div>
+                <button className="btn btn-primary w-full" onClick={saveSettings} disabled={settingsLoading}>
+                  {settingsLoading ? 'Сохранение...' : 'Сохранить'}
+                </button>
+              </div>
             </div>
-            
-            <div className="mt-6 pt-4 border-t">
-              <h4 className="font-bold text-sm text-muted uppercase tracking-wider mb-3">Статистика логов</h4>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm">Всего записей:</span>
+
+            {/* Stats */}
+            <div className="card p-5">
+              <h4 className="font-bold text-sm mb-3 uppercase tracking-wider text-muted">Статистика</h4>
+              <div className="flex justify-between mb-2">
+                <span className="text-sm text-muted">Всего записей:</span>
                 <span className="font-bold">{logStats.totalLogs}</span>
               </div>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm">Объем в БД:</span>
-                <span className="font-bold text-primary">{(logStats.exactBytes / 1024 / 1024).toFixed(2)} МБ</span>
+              <div className="flex justify-between mb-3">
+                <span className="text-sm text-muted">Объём:</span>
+                <span className="font-bold" style={{ color: 'var(--primary)' }}>{(logStats.exactBytes / 1024 / 1024).toFixed(2)} МБ</span>
               </div>
-              <div style={{ background: 'var(--bg-input)', height: '8px', borderRadius: '4px', overflow: 'hidden' }}>
-                <div style={{ background: 'var(--primary)', height: '100%', width: `${Math.min(100, (logStats.exactBytes / 1024 / 1024) / parseFloat(settings.maxLogSpaceMb) * 100)}%` }}></div>
+              <div style={{ background: 'var(--bg-input)', height: '6px', borderRadius: '3px', overflow: 'hidden' }}>
+                <div style={{
+                  background: 'var(--primary)', height: '100%',
+                  width: `${Math.min(100, (logStats.exactBytes / 1024 / 1024) / parseFloat(settings.maxLogSpaceMb) * 100)}%`,
+                  transition: 'width 0.3s ease'
+                }} />
               </div>
             </div>
           </div>
 
-          <div className="card flex-col" style={{ height: 'calc(100vh - 12rem)', minHeight: '600px' }}>
-            <div className="p-6 border-b" style={{ background: '#f8fafc' }}>
-              <h3 className="text-xl font-bold m-0 text-primary flex items-center gap-2"><Activity size={20} /> Журнал действий</h3>
+          {/* Log table */}
+          <div className="card" style={{ overflow: 'hidden' }}>
+            <div className="p-5 border-b flex justify-between items-center" style={{ background: 'var(--bg-input)' }}>
+              <h3 className="font-bold text-lg m-0 flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
+                <Activity size={18} /> Журнал аудита
+              </h3>
+              <span className="text-sm text-muted">{filteredLogs.length} из {logs.length}</span>
             </div>
-            <div style={{ overflowY: 'auto', flex: 1, padding: '1rem' }}>
-              <table className="table" style={{ borderCollapse: 'separate', borderSpacing: '0 0.5rem' }}>
+            <div style={{ overflowY: 'auto', maxHeight: 'calc(100vh - 18rem)' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
-                  <tr>
-                    <th style={{ background: 'transparent', borderBottom: '2px solid var(--border)', width: '40px' }}></th>
-                    <th style={{ background: 'transparent', borderBottom: '2px solid var(--border)', width: '150px' }}>Время</th>
-                    <th style={{ background: 'transparent', borderBottom: '2px solid var(--border)' }}>Пользователь</th>
-                    <th style={{ background: 'transparent', borderBottom: '2px solid var(--border)' }}>Событие</th>
+                  <tr style={{ borderBottom: '2px solid var(--border)', position: 'sticky', top: 0, background: 'white', zIndex: 1 }}>
+                    <th style={{ width: '46px' }} />
+                    <th style={{ padding: '0.6rem 0.5rem', textAlign: 'left', fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Время</th>
+                    <th style={{ padding: '0.6rem 0.5rem', textAlign: 'left', fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Пользователь</th>
+                    <th style={{ padding: '0.6rem 0.5rem', textAlign: 'left', fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Действие</th>
+                    <th style={{ padding: '0.6rem 0.5rem', textAlign: 'left', fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Объект</th>
+                    <th style={{ width: '36px' }} />
                   </tr>
                 </thead>
                 <tbody>
-                  {logs.map(log => (
-                    <React.Fragment key={log.id}>
-                      <tr 
-                        onClick={() => setExpandedLog(expandedLog === log.id ? null : log.id)} 
-                        style={{ background: 'white', boxShadow: expandedLog === log.id ? 'none' : 'var(--shadow-sm)', cursor: 'pointer' }}
-                      >
-                        <td className="p-4 text-center text-muted" style={{ borderRadius: expandedLog === log.id ? 'var(--radius-sm) 0 0 0' : 'var(--radius-sm) 0 0 var(--radius-sm)' }}>
-                          {expandedLog === log.id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                        </td>
-                        <td className="text-muted text-sm font-medium p-4">{new Date(log.createdAt).toLocaleString()}</td>
-                        <td className="font-bold text-primary p-4">{log.user?.username || 'Система'}</td>
-                        <td className="p-4" style={{ borderRadius: expandedLog === log.id ? '0 var(--radius-sm) 0 0' : '0 var(--radius-sm) var(--radius-sm) 0' }}>
-                          <div className="flex items-center gap-2">
-                            <span className="badge" style={{
-                              background: log.action === 'CREATE' ? '#dcfce7' : 
-                                        log.action === 'UPDATE' ? '#fef9c3' : 
-                                        log.action === 'DELETE' ? '#fee2e2' : 'var(--border-light)',
-                              color: log.action === 'CREATE' ? '#166534' : 
-                                    log.action === 'UPDATE' ? '#854d0e' : 
-                                    log.action === 'DELETE' ? '#991b1b' : 'var(--text-muted)'
-                            }}>
-                              {log.action}
-                            </span>
-                            <span className="font-medium text-sm">{formatLogAction(log)}</span>
-                          </div>
-                        </td>
-                      </tr>
-                      {expandedLog === log.id && (
-                        <tr>
-                          <td colSpan="4" style={{ padding: 0, border: 'none' }}>
-                            <div style={{ background: '#f8fafc', padding: '1.5rem', borderRadius: '0 0 var(--radius-sm) var(--radius-sm)', borderTop: '1px dashed var(--border)', boxShadow: 'var(--shadow-sm)', marginBottom: '0.5rem' }}>
-                              <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Детали изменения</div>
-                              {log.details ? (
-                                formatLogDetails(log.details)
-                              ) : (
-                                <span className="text-muted text-sm italic">Деталей нет</span>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </React.Fragment>
-                  ))}
-                  {logs.length === 0 && (
-                    <tr><td colSpan="4" className="text-center p-8 text-muted">Логов пока нет</td></tr>
+                  {filteredLogs.map(log => <LogRow key={log.id} log={log} />)}
+                  {filteredLogs.length === 0 && (
+                    <tr><td colSpan={6} className="text-center p-10 text-muted">Логов не найдено</td></tr>
                   )}
                 </tbody>
               </table>
