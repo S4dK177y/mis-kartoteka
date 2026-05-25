@@ -363,7 +363,7 @@ const AdminPanel = () => {
     <button
       className={`btn ${activeTab === id ? 'btn-primary' : 'btn-outline'}`}
       onClick={() => setActiveTab(id)}
-      style={{ gap: '0.4rem' }}
+      style={{ gap: '0.4rem', whiteSpace: 'nowrap', flexShrink: 0 }}
     >
       <Icon size={16} /> {label}
     </button>
@@ -378,7 +378,7 @@ const AdminPanel = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-3 mb-6">
+      <div className="flex gap-3 mb-6" style={{ overflowX: 'auto', paddingBottom: '0.5rem', scrollbarWidth: 'none' }}>
         {TAB_BTN('users', 'Пользователи', Users)}
         {TAB_BTN('security', 'Безопасность', Lock)}
         {TAB_BTN('logs', 'Журнал аудита', Activity)}
