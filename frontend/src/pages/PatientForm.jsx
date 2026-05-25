@@ -174,10 +174,12 @@ export default function PatientForm() {
   return (
     <div className="animate-fade-in" style={{ maxWidth: '1200px', margin: '0 auto' }}>
       <div className="flex items-center gap-4 mb-4 justify-between">
-        <button className="btn btn-icon btn-outline" onClick={() => navigate(-1)}>
-          <ArrowLeft size={16} />
-        </button>
-        <h2 className="text-xl m-0">{isEditing ? 'Редактирование пациента' : 'Новая запись пациента'}</h2>
+        <div className="flex items-center gap-4">
+          <button className="btn btn-icon btn-outline" onClick={() => navigate(-1)}>
+            <ArrowLeft size={16} />
+          </button>
+          <h2 className="text-xl m-0">{isEditing ? 'Редактирование госпитализации' : 'Новая госпитализация'}</h2>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit}>
