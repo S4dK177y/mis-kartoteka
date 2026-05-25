@@ -18,6 +18,50 @@ exports.getAll = async (req, res) => {
   }
 };
 
+exports.getById = async (req, res) => {
+  try {
+    const consultation = await prisma.consultation.findUnique({
+      where: { id: req.params.id },
+      include: {
+        documents: {
+          include: { uploader: { select: { username: true } } },
+          orderBy: { createdAt: 'desc' }
+        }
+      }
+    });
+
+    if (!consultation) return res.status(404).json({ error: 'Consultation not found' });
+
+    consultation.archiveDocuments = [];
+    if (consultation.personId) {
+      const pastHosp = await prisma.patient.findMany({
+        where: { personId: consultation.personId, admissionDate: { lt: consultation.consultationDate } },
+        select: { id: true }
+      });
+      const pastCons = await prisma.consultation.findMany({
+        where: { personId: consultation.personId, id: { not: consultation.id }, consultationDate: { lt: consultation.consultationDate } },
+        select: { id: true }
+      });
+
+      const orConditions = [];
+      if (pastHosp.length > 0) orConditions.push({ patientId: { in: pastHosp.map(h => h.id) } });
+      if (pastCons.length > 0) orConditions.push({ consultationId: { in: pastCons.map(c => c.id) } });
+
+      if (orConditions.length > 0) {
+        consultation.archiveDocuments = await prisma.document.findMany({
+          where: { OR: orConditions },
+          orderBy: { createdAt: 'desc' },
+          include: { uploader: { select: { username: true } } }
+        });
+      }
+    }
+
+    res.json(consultation);
+  } catch (error) {
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
 exports.create = async (req, res) => {
   try {
     const {

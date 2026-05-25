@@ -29,13 +29,35 @@ exports.getById = async (req, res) => {
     });
     if (!patient) return res.status(404).json({ error: 'Patient not found' });
 
-    let docWhere = patient.personId ? { personId: patient.personId } : { patientId: patient.id };
-    
     patient.documents = await prisma.document.findMany({
-      where: docWhere,
+      where: { patientId: patient.id },
       orderBy: { createdAt: 'desc' },
       include: { uploader: { select: { username: true } } }
     });
+
+    patient.archiveDocuments = [];
+    if (patient.personId) {
+      const pastHosp = await prisma.patient.findMany({
+        where: { personId: patient.personId, id: { not: patient.id }, admissionDate: { lt: patient.admissionDate } },
+        select: { id: true }
+      });
+      const pastCons = await prisma.consultation.findMany({
+        where: { personId: patient.personId, consultationDate: { lt: patient.admissionDate } },
+        select: { id: true }
+      });
+
+      const orConditions = [];
+      if (pastHosp.length > 0) orConditions.push({ patientId: { in: pastHosp.map(h => h.id) } });
+      if (pastCons.length > 0) orConditions.push({ consultationId: { in: pastCons.map(c => c.id) } });
+
+      if (orConditions.length > 0) {
+        patient.archiveDocuments = await prisma.document.findMany({
+          where: { OR: orConditions },
+          orderBy: { createdAt: 'desc' },
+          include: { uploader: { select: { username: true } } }
+        });
+      }
+    }
 
     let history = [];
     let consultations = [];

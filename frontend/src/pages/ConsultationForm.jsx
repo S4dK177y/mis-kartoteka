@@ -39,6 +39,7 @@ export default function ConsultationForm() {
   const [nextConsultationDate, setNextConsultationDate] = useState(null);
   const [birthDate, setBirthDate] = useState(prefillData?.birthDate ? new Date(prefillData.birthDate) : null);
   const [documents, setDocuments] = useState([]);
+  const [archiveDocuments, setArchiveDocuments] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -53,10 +54,9 @@ export default function ConsultationForm() {
   }, [id]);
 
   const fetchConsultation = async () => {
+    if (!id) return;
     try {
-      // Find the specific consultation by id
-      const dataList = await api.getConsultations();
-      const data = dataList.find(c => c.id === id);
+      const data = await api.getConsultation(id);
       if (!data) throw new Error("Консультация не найдена");
 
       setFormData({
@@ -87,6 +87,9 @@ export default function ConsultationForm() {
       
       if (data.documents) {
         setDocuments(data.documents);
+      }
+      if (data.archiveDocuments) {
+        setArchiveDocuments(data.archiveDocuments);
       }
     } catch (error) {
       console.error(error);
@@ -470,7 +473,7 @@ export default function ConsultationForm() {
                         </div>
                       </div>
                       <div className="flex gap-1 flex-shrink-0">
-                        <a href={api.getDocumentUrl(doc.id)} className="btn btn-icon" style={{ color: 'var(--primary)', background: 'transparent', padding: '0.3rem' }} title="Скачать">
+                        <a href={api.getDocumentUrl(doc.id)} className="btn btn-icon" style={{ color: 'var(--primary)', background: 'transparent', padding: '0.3rem' }} title="Скачать" target="_blank" rel="noopener noreferrer">
                           <Download size={16} />
                         </a>
                         <button type="button" className="btn btn-icon" style={{ color: 'var(--danger)', background: 'transparent', padding: '0.3rem' }} onClick={() => handleDeleteDocument(doc.id)} title="Удалить">
@@ -479,6 +482,51 @@ export default function ConsultationForm() {
                       </div>
                     </div>
                   ))}
+                </div>
+              )}
+
+              {/* Archive Documents Section */}
+              {archiveDocuments && archiveDocuments.length > 0 && (
+                <div className="mt-6 border-t pt-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <FileArchive size={18} className="text-muted" />
+                    <h4 className="text-md m-0 text-muted">Архивные файлы (предыдущие обращения)</h4>
+                  </div>
+                  <div className="grid-2 gap-2">
+                    {archiveDocuments.map(doc => (
+                      <div key={doc.id} className="flex justify-between items-center p-3 opacity-80" style={{ background: 'var(--bg-main)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-light)' }}>
+                        <div className="flex items-center gap-3" style={{ overflow: 'hidden' }}>
+                          {(() => {
+                            const lowerName = doc.originalName.toLowerCase();
+                            const lowerMime = doc.mimeType.toLowerCase();
+                            if (lowerName.endsWith('.pdf')) return <FileText size={20} style={{ color: '#ef4444', flexShrink: 0 }} />;
+                            if (lowerMime.startsWith('image/')) return <Image size={20} style={{ color: '#0ea5e9', flexShrink: 0 }} />;
+                            if (lowerMime.startsWith('video/')) return <FileVideo size={20} style={{ color: '#a855f7', flexShrink: 0 }} />;
+                            if (lowerMime.startsWith('audio/')) return <FileAudio size={20} style={{ color: '#f59e0b', flexShrink: 0 }} />;
+                            if (lowerName.endsWith('.zip') || lowerName.endsWith('.rar') || lowerName.endsWith('.7z')) return <FileArchive size={20} style={{ color: '#f59e0b', flexShrink: 0 }} />;
+                            if (lowerName.endsWith('.doc') || lowerName.endsWith('.docx')) return <FileText size={20} style={{ color: '#2563eb', flexShrink: 0 }} />;
+                            if (lowerName.endsWith('.xls') || lowerName.endsWith('.xlsx')) return <FileText size={20} style={{ color: '#10b981', flexShrink: 0 }} />;
+                            return <FileIcon size={20} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />;
+                          })()}
+                          <div className="flex-col" style={{ overflow: 'hidden' }}>
+                            <span style={{ fontSize: '0.85rem', fontWeight: 500, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }} title={doc.originalName}>
+                              {doc.originalName}
+                            </span>
+                            <div className="text-muted text-xs mt-1">
+                              {new Date(doc.createdAt).toLocaleDateString()}
+                              {doc.consultationId && <span className="ml-1" title="Прикреплено к приему">(Прием)</span>}
+                              {doc.patientId && <span className="ml-1" title="Прикреплено к госпитализации">(Госп.)</span>}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex gap-1 flex-shrink-0">
+                          <a href={api.getDocumentUrl(doc.id)} className="btn btn-icon" style={{ color: 'var(--primary)', background: 'transparent', padding: '0.3rem' }} title="Скачать" target="_blank" rel="noopener noreferrer">
+                            <Download size={16} />
+                          </a>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>

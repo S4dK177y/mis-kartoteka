@@ -195,6 +195,12 @@ export const api = {
     return res.json();
   },
 
+  getConsultation: async (id) => {
+    const res = await fetchWithAuth(`${API_URL}/consultations/${id}`);
+    if (!res.ok) throw new Error('Failed to fetch consultation');
+    return res.json();
+  },
+
   createConsultation: async (data) => {
     const res = await fetchWithAuth(`${API_URL}/consultations`, {
       method: 'POST',
