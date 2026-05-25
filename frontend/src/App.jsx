@@ -26,22 +26,22 @@ const Header = () => {
 
   return (
     <header className="header">
-      <div className="flex items-center gap-6">
+      <div className="flex items-center gap-6 flex-wrap">
         <Link to="/" className="header-logo">
           <div style={{ background: 'var(--primary)', color: 'white', padding: '6px', borderRadius: '10px', display: 'flex' }}>
             <Activity size={24} />
           </div>
           МИС Картотека
         </Link>
-        <nav className="header-nav flex gap-4" style={{ marginLeft: '2rem' }}>
+        <nav className="header-nav flex gap-4 flex-wrap" style={{ marginLeft: '1rem' }}>
           <Link to="/" className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}>Стационар</Link>
           <Link to="/consultations" className={`nav-link ${location.pathname.startsWith('/consultations') ? 'active' : ''}`}>Амбулатория</Link>
           <Link to="/persons" className={`nav-link ${location.pathname.startsWith('/persons') ? 'active' : ''}`}>Все пациенты</Link>
         </nav>
       </div>
       
-      <div className="flex gap-4 items-center">
-        <div style={{ display: 'flex', gap: '8px' }}>
+      <div className="flex gap-4 items-center flex-wrap">
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           <a href={api.exportPatientsUrl} className="btn btn-outline" download title="Экспорт в Excel (Стационар и Амбулатория)">
             <Download size={18} /> Экспорт
           </a>
