@@ -83,6 +83,8 @@ app.use('/api/persons', personsRoutes);
 app.use('/api', documentsRoutes); // mounts /patients/:patientId/documents and /documents/:id
 app.use('/api', exportRoutes); // mounts /export/patients
 
+const backupController = require('./controllers/backup.controller');
+
 // Background task to clean logs
 const cleanLogs = async () => {
   try {
@@ -130,7 +132,12 @@ const cleanLogs = async () => {
   }
 };
 setInterval(cleanLogs, 1000 * 60 * 60);
-setTimeout(cleanLogs, 10000);
+
+// Run initial startup tasks
+setTimeout(() => {
+  cleanLogs();
+  backupController.initScheduledBackups();
+}, 10000);
 
 // Serve Frontend Static Files
 const frontendDistPath = path.join(__dirname, '..', '..', 'frontend', 'dist');

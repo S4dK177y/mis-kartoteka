@@ -19,7 +19,7 @@ async function initGost() {
   }
 }
 
-const ENCRYPTION_CONFIG_PATH = path.join(__dirname, '..', '..', '..', 'data', 'encryption.json');
+const ENCRYPTION_CONFIG_PATH = path.join(__dirname, '..', '..', 'data', 'encryption.json');
 
 // In-memory master key (never saved to disk)
 let masterKey = null;

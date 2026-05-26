@@ -86,7 +86,7 @@ exports.factoryReset = async (req, res) => {
     execSync('npx prisma db push --force-reset --accept-data-loss', { cwd: backendDir });
 
     // 3. Delete encryption config
-    const encPath = path.join(backendDir, '..', 'data', 'encryption.json');
+    const encPath = path.join(backendDir, 'data', 'encryption.json');
     if (fs.existsSync(encPath)) fs.unlinkSync(encPath);
 
     // 4. Clear storage directory

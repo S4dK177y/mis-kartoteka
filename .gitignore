@@ -90,6 +90,9 @@ frontend/dist/
 data/
 *.sqlite
 *.sqlite-journal
+backend/backups/
+backend/data/
+*.bak
 
 launcher/node_modules/
 launcher/dist/

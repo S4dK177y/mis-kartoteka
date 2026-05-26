@@ -1,6 +1,6 @@
 {
   "name": "backend",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
@@ -15,6 +15,7 @@
     "@li0ard/kuznyechik": "^0.1.5",
     "@li0ard/streebog": "^0.2.6",
     "@prisma/client": "^5.22.0",
+    "adm-zip": "^0.5.17",
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
@@ -26,6 +27,7 @@
     "koffi": "^3.0.2",
     "kuznyechik_multi": "^1.1.5",
     "multer": "^2.1.1",
+    "node-cron": "^4.2.1",
     "sqlite3": "^6.0.1"
   },
   "devDependencies": {

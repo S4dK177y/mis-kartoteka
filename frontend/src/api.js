@@ -175,6 +175,70 @@ export const api = {
     return res.json();
   },
 
+  // --- BACKUPS ---
+  getBackupSettings: async () => {
+    const res = await fetchWithAuth(`${API_URL}/backups/settings`);
+    if (!res.ok) throw new Error('Failed to fetch backup settings');
+    return res.json();
+  },
+
+  updateBackupSettings: async (settings) => {
+    const res = await fetchWithAuth(`${API_URL}/backups/settings`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(settings)
+    });
+    if (!res.ok) throw new Error('Failed to update backup settings');
+    return res.json();
+  },
+
+  getBackups: async () => {
+    const res = await fetchWithAuth(`${API_URL}/backups`);
+    if (!res.ok) throw new Error('Failed to fetch backups');
+    return res.json();
+  },
+
+  createBackup: async () => {
+    const res = await fetchWithAuth(`${API_URL}/backups/create`, { method: 'POST' });
+    if (!res.ok) throw new Error('Failed to create backup');
+    return res.json();
+  },
+
+  deleteBackup: async (filename) => {
+    const res = await fetchWithAuth(`${API_URL}/backups/${filename}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Failed to delete backup');
+    return res.json();
+  },
+
+  restoreBackupFromServer: async (filename) => {
+    const res = await fetchWithAuth(`${API_URL}/backups/restore`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filename })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Restore failed');
+    }
+    return res.json();
+  },
+
+  uploadAndRestoreBackup: async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetchWithAuth(`${API_URL}/backups/upload-and-restore`, {
+      method: 'POST',
+      body: formData
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Restore failed');
+    }
+    return res.json();
+  },
+
+  getBackupDownloadUrl: (filename) => `${API_URL}/backups/download/${filename}`,
+
   // --- PATIENTS ---
   getPatients: async () => {
     const res = await fetchWithAuth(`${API_URL}/patients`);
