@@ -75,6 +75,15 @@ export const api = {
     return res.json();
   },
 
+  factoryReset: async () => {
+    const res = await fetchWithAuth(`${API_URL}/system/factory-reset`, { method: 'POST' });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to factory reset');
+    }
+    return res.json();
+  },
+
   setupEncryption: async (password) => {
     const res = await fetchWithAuth(`${API_URL}/system/setup-encryption`, {
       method: 'POST',

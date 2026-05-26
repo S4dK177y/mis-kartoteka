@@ -256,6 +256,9 @@ const AdminPanel = () => {
   const [confirmNewMasterPassword, setConfirmNewMasterPassword] = useState('');
   const [cpLoading, setCpLoading] = useState(false);
   const [cpMessage, setCpMessage] = useState(null); // { type: 'success'|'error', text }
+  
+  const [resetConfirmWord, setResetConfirmWord] = useState('');
+  const [isResetting, setIsResetting] = useState(false);
 
   // Logs tab
   const [logs, setLogs] = useState([]);
@@ -327,6 +330,28 @@ const AdminPanel = () => {
       setCpMessage({ type: 'error', text: err.message || 'Ошибка при смене мастер-пароля' });
     } finally {
       setCpLoading(false);
+    }
+  };
+
+  const handleFactoryReset = async () => {
+    if (resetConfirmWord !== 'СБРОС') {
+      alert('Для подтверждения введите слово СБРОС (заглавными буквами)');
+      return;
+    }
+    
+    if (!window.confirm('ВЫ УВЕРЕНЫ? Это удалит ВСЕ данные пациентов, документы, пользователей и логи без возможности восстановления!')) {
+      return;
+    }
+
+    setIsResetting(true);
+    try {
+      await api.factoryReset();
+      setTimeout(() => {
+        window.location.href = '/setup';
+      }, 500);
+    } catch (err) {
+      alert(err.message || 'Ошибка при сбросе системы');
+      setIsResetting(false);
     }
   };
 
@@ -573,6 +598,39 @@ const AdminPanel = () => {
                     <span style={{ fontSize: '0.83rem', color: '#92400e', lineHeight: 1.6 }}>{t}</span>
                   </div>
                 ))}
+              </div>
+            </div>
+
+            {/* Factory Reset */}
+            <div className="card" style={{ overflow: 'hidden', border: '1px solid #fca5a5' }}>
+              <div style={{ padding: '0.85rem 1.25rem', borderBottom: '1px solid #fca5a5', background: '#fef2f2' }}>
+                <h4 className="font-bold text-base m-0 flex items-center gap-2" style={{ color: '#991b1b' }}>
+                  <Trash2 size={17} style={{ color: '#ef4444' }} /> Сброс до заводских настроек
+                </h4>
+              </div>
+              <div style={{ padding: '1rem 1.25rem', background: '#fef2f2' }} className="flex-col gap-3">
+                <p style={{ margin: 0, fontSize: '0.85rem', color: '#7f1d1d', lineHeight: 1.5, fontWeight: 500 }}>
+                  ВНИМАНИЕ! Эта операция <strong>полностью уничтожит базу данных</strong>, удалит всех пользователей, все документы с диска и сбросит настройки шифрования. 
+                  Восстановить данные будет <strong>невозможно</strong>.
+                </p>
+                <div className="flex gap-2 items-center mt-2">
+                  <input 
+                    type="text" 
+                    className="input-field" 
+                    placeholder="Введите СБРОС" 
+                    value={resetConfirmWord}
+                    onChange={e => setResetConfirmWord(e.target.value)}
+                    style={{ flex: 1, borderColor: '#fca5a5', background: 'white' }}
+                  />
+                  <button 
+                    className="btn btn-primary" 
+                    style={{ background: '#dc2626', borderColor: '#dc2626', padding: '0.6rem 1rem' }}
+                    onClick={handleFactoryReset}
+                    disabled={isResetting || resetConfirmWord !== 'СБРОС'}
+                  >
+                    {isResetting ? 'Сброс системы...' : 'УНИЧТОЖИТЬ ДАННЫЕ'}
+                  </button>
+                </div>
               </div>
             </div>
           </div>

@@ -20,17 +20,18 @@ const deterministicFields = {
 
 const encryptModelFields = (model, data) => {
   if (!data) return data;
+  if (!cryptoUtil.isInitialized() || !cryptoUtil.isUnlocked()) return data; // Bypass if not setup or locked
   const fields = encryptedFields[model] || [];
   const detFields = deterministicFields[model] || [];
   const result = { ...data };
   
   for (const field of fields) {
-    if (result[field] !== undefined && result[field] !== null) {
+    if (result[field] !== undefined && result[field] !== null && typeof result[field] === 'string' && !result[field].startsWith('gost:') && !result[field].startsWith('detgost:')) {
       result[field] = cryptoUtil.encryptText(result[field]);
     }
   }
   for (const field of detFields) {
-    if (result[field] !== undefined && result[field] !== null) {
+    if (result[field] !== undefined && result[field] !== null && typeof result[field] === 'string' && !result[field].startsWith('gost:') && !result[field].startsWith('detgost:')) {
       result[field] = cryptoUtil.encryptDeterministic(result[field]);
     }
   }
@@ -80,7 +81,9 @@ const extendedPrisma = prisma.$extends({
             args.where = { ...args.where };
             for (const field of deterministicFields[model]) {
               if (args.where[field] !== undefined && args.where[field] !== null && typeof args.where[field] === 'string') {
-                args.where[field] = cryptoUtil.encryptDeterministic(args.where[field]);
+                if (cryptoUtil.isInitialized() && cryptoUtil.isUnlocked() && !args.where[field].startsWith('detgost:')) {
+                  args.where[field] = cryptoUtil.encryptDeterministic(args.where[field]);
+                }
               }
             }
           }

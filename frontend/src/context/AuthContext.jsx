@@ -58,6 +58,7 @@ export const AuthProvider = ({ children }) => {
   const setup = async (username, password) => {
     await api.setupSystem(username, password);
     setNeedsSetup(false);
+    setIsLocked(true); // Lock it so router redirects directly to /locked instead of flashing the main site
     await login(username, password);
   };
 

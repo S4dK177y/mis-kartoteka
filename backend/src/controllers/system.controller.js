@@ -66,3 +66,42 @@ exports.changePassword = async (req, res) => {
     res.status(400).json({ error: err.message });
   }
 };
+
+exports.factoryReset = async (req, res) => {
+  try {
+    if (req.user.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Only administrators can perform a factory reset' });
+    }
+
+    const fs = require('fs');
+    const path = require('path');
+    const { execSync } = require('child_process');
+    const { storageDir } = require('../middlewares/upload');
+
+    // 1. Disconnect database to release file locks
+    await prisma.$disconnect();
+
+    // 2. Force reset database using Prisma CLI (safe for WAL/sqlite)
+    const backendDir = path.join(__dirname, '..', '..');
+    execSync('npx prisma db push --force-reset --accept-data-loss', { cwd: backendDir });
+
+    // 3. Delete encryption config
+    const encPath = path.join(backendDir, '..', 'data', 'encryption.json');
+    if (fs.existsSync(encPath)) fs.unlinkSync(encPath);
+
+    // 4. Clear storage directory
+    if (fs.existsSync(storageDir)) {
+      fs.rmSync(storageDir, { recursive: true, force: true });
+    }
+    fs.mkdirSync(storageDir, { recursive: true });
+
+    // 5. Lock crypto in memory
+    cryptoUtil.lock();
+
+    res.json({ success: true, message: 'System reset to factory defaults.' });
+
+  } catch (err) {
+    console.error('Factory reset error:', err);
+    res.status(500).json({ error: 'Failed to perform factory reset: ' + err.message });
+  }
+};
