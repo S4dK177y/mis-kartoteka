@@ -18,24 +18,7 @@ import ICD10Autocomplete from '../components/ICD10Autocomplete';
 import { PatientSummaryCard } from './patient/PatientSummaryCard';
 import { ConsultationsHistory } from './patient/ConsultationsHistory';
 import { DocumentsManager } from './patient/DocumentsManager';
-import { Button } from '../components/ui';
-
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
-
-const LazyPdfPage = ({ pageNumber, width }) => {
-  const { ref, inView } = useInView({ rootMargin: '100px 0px', triggerOnce: false });
-  return (
-    <div ref={ref} style={{ minHeight: '800px', marginBottom: '1rem', width: '100%', display: 'flex', justifyContent: 'center' }}>
-      {inView ? (
-        <Page pageNumber={pageNumber} renderTextLayer={false} renderAnnotationLayer={false} width={width} className="shadow-lg" renderMode="canvas" />
-      ) : (
-        <div style={{ height: '800px', width: width, background: '#444', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888' }}>
-          Загрузка страницы {pageNumber}...
-        </div>
-      )}
-    </div>
-  );
-};
+import { Button, DocumentViewer } from '../components/ui';
 
 export default function PatientProfile() {
   const { id } = useParams();
@@ -251,41 +234,11 @@ export default function PatientProfile() {
         />
       </div>
 
-      {viewingFile && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', zIndex: 9999, display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', background: 'rgba(0,0,0,0.7)', color: 'white' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <FileIcon size={20} />
-              <span style={{ fontWeight: 600 }}>{viewingFile.originalName}</span>
-            </div>
-            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-              <a href={api.getDocumentUrl(viewingFile.id)} className="btn btn-outline" style={{ color: 'white', borderColor: 'rgba(255,255,255,0.3)' }} title="Скачать">
-                <Download size={16} /> Скачать
-              </a>
-              <button className="btn btn-icon" style={{ color: 'white', background: 'rgba(255,255,255,0.1)' }} onClick={() => setViewingFile(null)}>
-                <X size={20} />
-              </button>
-            </div>
-          </div>
-          <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'flex-start', padding: '1rem', overflow: 'auto' }}>
-            {viewingFile.mimeType.startsWith('image/') ? (
-              <img src={`${api.getDocumentUrl(viewingFile.id)}?inline=true`} alt={viewingFile.originalName} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', boxShadow: '0 10px 25px rgba(0,0,0,0.5)', alignSelf: 'center' }} />
-            ) : (
-              <div style={{ background: '#333', padding: '1rem', borderRadius: '8px', minWidth: '80%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
-                <Document
-                  file={{ url: `${api.getDocumentUrl(viewingFile.id)}?inline=true`, withCredentials: true }}
-                  onLoadSuccess={({ numPages }) => setNumPages(numPages)}
-                  loading={<div className="text-white p-8">Загрузка PDF...</div>}
-                >
-                  {Array.from(new Array(numPages || 0), (el, index) => (
-                    <LazyPdfPage key={`page_${index + 1}`} pageNumber={index + 1} width={Math.min(window.innerWidth * 0.9, 900)} />
-                  ))}
-                </Document>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      <DocumentViewer 
+        file={viewingFile} 
+        isOpen={!!viewingFile} 
+        onClose={() => setViewingFile(null)} 
+      />
     </div>
   );
 }

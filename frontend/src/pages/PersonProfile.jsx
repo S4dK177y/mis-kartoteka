@@ -1,28 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, User, Activity, FileText, Download, Trash2, Image, FileVideo, FileAudio, FileArchive, File as FileIcon, X } from 'lucide-react';
+import { ArrowLeft, Activity, FileText } from 'lucide-react';
 import { api } from '../api';
-import { Document, Page, pdfjs } from 'react-pdf';
-import { useInView } from 'react-intersection-observer';
-import 'react-pdf/dist/Page/AnnotationLayer.css';
-import 'react-pdf/dist/Page/TextLayer.css';
-
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
-
-const LazyPdfPage = ({ pageNumber, width }) => {
-  const { ref, inView } = useInView({ rootMargin: '100px 0px', triggerOnce: false });
-  return (
-    <div ref={ref} style={{ minHeight: '800px', marginBottom: '1rem', width: '100%', display: 'flex', justifyContent: 'center' }}>
-      {inView ? (
-        <Page pageNumber={pageNumber} renderTextLayer={false} renderAnnotationLayer={false} width={width} className="shadow-lg" renderMode="canvas" />
-      ) : (
-        <div style={{ height: '800px', width: width, background: '#444', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888' }}>
-          Загрузка страницы {pageNumber}...
-        </div>
-      )}
-    </div>
-  );
-};
+import { DocumentCard, DocumentViewer } from '../components/ui';
 
 export default function PersonProfile() {
   const { id } = useParams();
@@ -261,40 +241,12 @@ export default function PersonProfile() {
               </div>
             ) : (
               person.documents.map(doc => (
-                <div key={doc.id} className="flex justify-between items-center p-2" style={{ background: 'var(--bg-main)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-light)' }}>
-                  <div className="flex items-center gap-2" style={{ overflow: 'hidden' }}>
-                    {(() => {
-                      const lowerName = doc.originalName.toLowerCase();
-                      const lowerMime = doc.mimeType.toLowerCase();
-                      if (lowerName.endsWith('.pdf')) return <FileText size={16} style={{ color: '#ef4444', flexShrink: 0 }} />;
-                      if (lowerMime.startsWith('image/')) return <Image size={16} style={{ color: '#0ea5e9', flexShrink: 0 }} />;
-                      if (lowerMime.startsWith('video/')) return <FileVideo size={16} style={{ color: '#a855f7', flexShrink: 0 }} />;
-                      if (lowerMime.startsWith('audio/')) return <FileAudio size={16} style={{ color: '#f59e0b', flexShrink: 0 }} />;
-                      if (lowerName.endsWith('.zip') || lowerName.endsWith('.rar') || lowerName.endsWith('.7z')) return <FileArchive size={16} style={{ color: '#f59e0b', flexShrink: 0 }} />;
-                      if (lowerName.endsWith('.doc') || lowerName.endsWith('.docx')) return <FileText size={16} style={{ color: '#2563eb', flexShrink: 0 }} />;
-                      if (lowerName.endsWith('.xls') || lowerName.endsWith('.xlsx')) return <FileText size={16} style={{ color: '#10b981', flexShrink: 0 }} />;
-                      return <FileIcon size={16} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />;
-                    })()}
-                    <div className="flex-col" style={{ overflow: 'hidden' }}>
-                      <a href="#" onClick={(e) => handleFileClick(e, doc)} style={{ textDecoration: 'none', color: 'var(--text-main)', fontSize: '0.8rem', fontWeight: 500, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }} title={doc.originalName}>
-                        {doc.originalName}
-                      </a>
-                      <div className="text-muted text-xs mt-1">
-                        {new Date(doc.createdAt).toLocaleDateString()}
-                        {doc.consultationId && <span className="ml-1" title="Прикреплено к приему">(Прием)</span>}
-                        {doc.patientId && <span className="ml-1" title="Прикреплено к госпитализации">(Госпитализация)</span>}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex gap-1 flex-shrink-0">
-                    <a href={api.getDocumentUrl(doc.id)} className="btn btn-icon" style={{ color: 'var(--primary)', background: 'transparent', padding: '0.2rem' }} title="Скачать">
-                      <Download size={14} />
-                    </a>
-                    <button className="btn btn-icon" style={{ color: 'var(--danger)', background: 'transparent', padding: '0.2rem' }} onClick={() => handleDeleteDocument(doc.id)} title="Удалить">
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </div>
+                <DocumentCard 
+                  key={doc.id} 
+                  doc={doc} 
+                  onClick={handleFileClick} 
+                  onDelete={handleDeleteDocument} 
+                />
               ))
             )}
           </div>
@@ -302,45 +254,11 @@ export default function PersonProfile() {
       </div>
 
       {/* File Viewer Modal */}
-      {viewingFile && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', zIndex: 9999, display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', background: 'rgba(0,0,0,0.7)', color: 'white' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <FileIcon size={20} />
-              <span style={{ fontWeight: 600 }}>{viewingFile.originalName}</span>
-            </div>
-            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-              <a href={api.getDocumentUrl(viewingFile.id)} className="btn btn-outline" style={{ color: 'white', borderColor: 'rgba(255,255,255,0.3)' }} title="Скачать">
-                <Download size={16} /> Скачать
-              </a>
-              <button className="btn btn-icon" style={{ color: 'white', background: 'rgba(255,255,255,0.1)' }} onClick={() => setViewingFile(null)}>
-                <X size={20} />
-              </button>
-            </div>
-          </div>
-          <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'flex-start', padding: '1rem', overflow: 'auto' }}>
-            {viewingFile.mimeType.startsWith('image/') ? (
-              <img src={`${api.getDocumentUrl(viewingFile.id)}?inline=true`} alt={viewingFile.originalName} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', boxShadow: '0 10px 25px rgba(0,0,0,0.5)', alignSelf: 'center' }} />
-            ) : (
-              <div style={{ background: '#333', padding: '1rem', borderRadius: '8px', minWidth: '80%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
-                <Document
-                  file={{ url: `${api.getDocumentUrl(viewingFile.id)}?inline=true`, withCredentials: true }}
-                  onLoadSuccess={({ numPages }) => setNumPages(numPages)}
-                  loading={<div className="text-white p-8">Загрузка PDF...</div>}
-                >
-                  {Array.from(new Array(numPages || 0), (el, index) => (
-                    <LazyPdfPage 
-                      key={`page_${index + 1}`}
-                      pageNumber={index + 1}
-                      width={Math.min(window.innerWidth * 0.9, 900)}
-                    />
-                  ))}
-                </Document>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      <DocumentViewer 
+        file={viewingFile} 
+        isOpen={!!viewingFile} 
+        onClose={() => setViewingFile(null)} 
+      />
     </div>
   );
 }

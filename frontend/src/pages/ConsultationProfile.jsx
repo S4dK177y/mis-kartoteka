@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Edit, Trash2, Calendar, FileText, Download, User } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, Calendar, FileText, User } from 'lucide-react';
 import { api } from '../api';
+import { DocumentCard, DocumentViewer } from '../components/ui';
 
 export default function ConsultationProfile() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [consultation, setConsultation] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [viewingFile, setViewingFile] = useState(null);
 
   useEffect(() => {
     fetchConsultation();
@@ -182,26 +184,23 @@ export default function ConsultationProfile() {
             {consultation.documents.map(doc => {
               const isVvkScan = vvk && doc.id === vvk.documentId;
               return (
-                <div key={doc.id} className="flex justify-between items-center p-3" style={{ background: isVvkScan ? '#f0fdf4' : 'var(--bg-main)', border: `1px solid ${isVvkScan ? '#bbf7d0' : 'var(--border)'}`, borderRadius: 'var(--radius-md)' }}>
-                  <div className="flex items-center gap-3 overflow-hidden">
-                    <FileText size={20} className={isVvkScan ? "text-secondary" : "text-primary"} />
-                    <div className="flex-col overflow-hidden">
-                      <span className="font-semibold text-sm truncate block" style={{ color: isVvkScan ? '#166534' : 'var(--text-main)' }}>
-                        {doc.originalName}
-                        {isVvkScan && <span className="ml-2 text-xs opacity-75">(Скан ВВК)</span>}
-                      </span>
-                      <span className="text-xs text-muted">{(doc.size / 1024).toFixed(1)} KB • {new Date(doc.createdAt).toLocaleDateString()}</span>
-                    </div>
-                  </div>
-                  <a href={api.getDocumentUrl(doc.id)} className="btn btn-icon btn-outline" target="_blank" rel="noopener noreferrer">
-                    <Download size={16} />
-                  </a>
-                </div>
+                <DocumentCard 
+                  key={doc.id} 
+                  doc={doc} 
+                  isVvkScan={isVvkScan}
+                  onClick={(e, document) => setViewingFile(document)} 
+                />
               );
             })}
           </div>
         </div>
       )}
+
+      <DocumentViewer 
+        file={viewingFile} 
+        isOpen={!!viewingFile} 
+        onClose={() => setViewingFile(null)} 
+      />
     </div>
   );
 }
