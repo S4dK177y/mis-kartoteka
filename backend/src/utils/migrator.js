@@ -1,91 +1,94 @@
-const fs = require('fs');
-const path = require('path');
-const crypto = require('crypto');
+const { PrismaClient } = require('@prisma/client');
 const cryptoUtil = require('./crypto');
-const prisma = require('./prisma');
-const { storageDir } = require('../middlewares/upload');
+
+// Use a raw PrismaClient WITHOUT the encryption middleware.
+// This ensures we read actual values from DB (plaintext or gost: strings)
+// without any auto-decrypt/encrypt interference.
+const rawPrisma = new PrismaClient();
+
+const ENCRYPTED_FIELDS = {
+  Patient: ['fullName', 'address', 'phoneNumber', 'relativeFullName', 'relativePhone', 'relativeAddress', 'dischargeDestination', 'admissionDiagnosis', 'clinicalDiagnosis', 'finalDiagnosis', 'complications', 'rank', 'militaryUnit', 'relativeRelation', 'caseHistoryNumber'],
+  Consultation: ['fullName', 'address', 'phoneNumber', 'relativeFullName', 'relativePhone', 'relativeAddress', 'diagnosis', 'notes', 'rank', 'militaryUnit', 'relativeRelation'],
+  User: [],
+  Document: ['originalName', 'filename'],
+  VvkConclusion: ['neurologistCategory', 'ophthalmologistCategory', 'dentistCategory', 'surgeonCategory', 'therapistCategory', 'finalCategory'],
+  AuditLog: ['details']
+};
+
+const DETERMINISTIC_FIELDS = {
+  Patient: ['tokenNumber'],
+  Consultation: ['tokenNumber'],
+  User: ['username']
+};
+
+/** Returns true if the value already has a GOST encryption prefix. */
+function isAlreadyEncrypted(value) {
+  if (typeof value !== 'string') return false;
+  return value.startsWith('gost:') || value.startsWith('detgost:');
+}
+
+/** Yields to the event loop so server remains responsive during migration. */
+function yieldLoop() {
+  return new Promise(resolve => setImmediate(resolve));
+}
 
 async function migrateData() {
   console.log('Starting data migration to encrypted format...');
-  
-  // 1. Migrate Patients
-  const patients = await prisma.patient.findMany();
-  for (const p of patients) {
-    await prisma.patient.update({
-      where: { id: p.id },
-      data: {
-        fullName: p.fullName,
-        address: p.address,
-        phoneNumber: p.phoneNumber,
-        relativeFullName: p.relativeFullName,
-        relativePhone: p.relativePhone,
-        admissionDiagnosis: p.admissionDiagnosis,
-        clinicalDiagnosis: p.clinicalDiagnosis,
-        finalDiagnosis: p.finalDiagnosis,
-        complications: p.complications
-      }
-    });
-  }
-  
-  // 2. Migrate Consultations
-  const consultations = await prisma.consultation.findMany();
-  for (const c of consultations) {
-    await prisma.consultation.update({
-      where: { id: c.id },
-      data: {
-        fullName: c.fullName,
-        address: c.address,
-        phoneNumber: c.phoneNumber,
-        relativeFullName: c.relativeFullName,
-        relativePhone: c.relativePhone,
-        diagnosis: c.diagnosis,
-        notes: c.notes
-      }
-    });
-  }
-  
-  // 3. Migrate Files
-  if (fs.existsSync(storageDir)) {
-    const entities = fs.readdirSync(storageDir);
-    for (const entityId of entities) {
-      const entityPath = path.join(storageDir, entityId);
-      if (fs.statSync(entityPath).isDirectory()) {
-        const files = fs.readdirSync(entityPath);
-        for (const file of files) {
-          const filePath = path.join(entityPath, file);
-          const fileBuffer = fs.readFileSync(filePath);
-          
-          let isEncrypted = false;
-          try {
-            if (fileBuffer.length > 28) {
-              const iv = fileBuffer.slice(0, 12);
-              const authTag = fileBuffer.slice(12, 28);
-              const encryptedData = fileBuffer.slice(28);
-              const decipher = crypto.createDecipheriv('aes-256-gcm', cryptoUtil.getMasterKey(), iv);
-              decipher.setAuthTag(authTag);
-              let decrypted = decipher.update(encryptedData);
-              Buffer.concat([decrypted, decipher.final()]);
-              isEncrypted = true;
-            }
-          } catch (err) {
-            isEncrypted = false;
-          }
-          
-          if (!isEncrypted) {
-            const iv = crypto.randomBytes(12);
-            const cipher = crypto.createCipheriv('aes-256-gcm', cryptoUtil.getMasterKey(), iv);
-            let encryptedFile = cipher.update(fileBuffer);
-            encryptedFile = Buffer.concat([encryptedFile, cipher.final()]);
-            const authTag = cipher.getAuthTag();
-            const finalBuffer = Buffer.concat([iv, authTag, encryptedFile]);
-            
-            fs.writeFileSync(filePath, finalBuffer);
+
+  const models = ['Patient', 'Consultation', 'User', 'Document', 'VvkConclusion', 'AuditLog'];
+
+  for (const model of models) {
+    const prismaModelName = model.charAt(0).toLowerCase() + model.slice(1);
+    if (!rawPrisma[prismaModelName]) continue;
+
+    const encFields = ENCRYPTED_FIELDS[model] || [];
+    const detFields = DETERMINISTIC_FIELDS[model] || [];
+
+    if (encFields.length === 0 && detFields.length === 0) continue;
+
+    try {
+      console.log(`Migrating ${model}...`);
+      // Read raw values directly — no middleware decryption
+      const records = await rawPrisma[prismaModelName].findMany();
+      let count = 0;
+
+      for (const record of records) {
+        const dataToUpdate = {};
+
+        for (const field of encFields) {
+          const val = record[field];
+          // Only encrypt plaintext values — skip nulls and already-encrypted fields
+          if (val != null && !isAlreadyEncrypted(val)) {
+            dataToUpdate[field] = cryptoUtil.encryptText(String(val));
           }
         }
+
+        for (const field of detFields) {
+          const val = record[field];
+          if (val != null && !isAlreadyEncrypted(val)) {
+            dataToUpdate[field] = cryptoUtil.encryptDeterministic(String(val));
+          }
+        }
+
+        if (Object.keys(dataToUpdate).length > 0) {
+          // Write raw encrypted strings directly — no middleware re-encryption
+          await rawPrisma[prismaModelName].update({
+            where: { id: record.id },
+            data: dataToUpdate
+          });
+          count++;
+        }
+
+        // Yield after each record to keep the event loop free
+        await yieldLoop();
       }
+
+      console.log(`Migrated ${model}: ${count}/${records.length} records.`);
+    } catch (err) {
+      console.error(`Error migrating ${model}:`, err.message);
     }
   }
-  
+
   console.log('Migration to encrypted format completed.');
 }
 

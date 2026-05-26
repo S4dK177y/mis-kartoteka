@@ -45,15 +45,7 @@ exports.upload = async (req, res) => {
     if (!fs.existsSync(entityDir)) fs.mkdirSync(entityDir, { recursive: true });
     
     const filePath = path.join(entityDir, filename);
-    const iv = crypto.randomBytes(12);
-    const cipher = crypto.createCipheriv('aes-256-gcm', cryptoUtil.getMasterKey(), iv);
-    
-    let encryptedFile = cipher.update(file.buffer);
-    encryptedFile = Buffer.concat([encryptedFile, cipher.final()]);
-    const authTag = cipher.getAuthTag();
-    
-    // Write IV + AuthTag + Encrypted Data to disk
-    const finalBuffer = Buffer.concat([iv, authTag, encryptedFile]);
+    const finalBuffer = cryptoUtil.encryptBuffer(file.buffer);
     fs.writeFileSync(filePath, finalBuffer);
 
     await logAction(req.user.id, 'UPLOAD', 'Document', document.id, { originalName: file.originalname, entityId });
@@ -110,12 +102,7 @@ exports.uploadVvk = async (req, res) => {
     if (!fs.existsSync(entityDir)) fs.mkdirSync(entityDir, { recursive: true });
     const filePath = path.join(entityDir, filename);
     
-    const iv = crypto.randomBytes(12);
-    const cipher = crypto.createCipheriv('aes-256-gcm', cryptoUtil.getMasterKey(), iv);
-    let encryptedFile = cipher.update(file.buffer);
-    encryptedFile = Buffer.concat([encryptedFile, cipher.final()]);
-    const authTag = cipher.getAuthTag();
-    const finalBuffer = Buffer.concat([iv, authTag, encryptedFile]);
+    const finalBuffer = cryptoUtil.encryptBuffer(file.buffer);
     fs.writeFileSync(filePath, finalBuffer);
 
     await logAction(req.user.id, 'UPLOAD', 'Document VVK', document.id, { originalName: file.originalname, consultationId });
@@ -161,15 +148,7 @@ exports.download = async (req, res) => {
     // we can either assume it's encrypted (if encryption is initialized) or check a magic signature.
     // Assuming all new files are encrypted:
     try {
-      const iv = fileBuffer.slice(0, 12);
-      const authTag = fileBuffer.slice(12, 28);
-      const encryptedData = fileBuffer.slice(28);
-      
-      const decipher = crypto.createDecipheriv('aes-256-gcm', cryptoUtil.getMasterKey(), iv);
-      decipher.setAuthTag(authTag);
-      let decrypted = decipher.update(encryptedData);
-      decrypted = Buffer.concat([decrypted, decipher.final()]);
-      
+      const decrypted = cryptoUtil.decryptBuffer(fileBuffer);
       res.send(decrypted);
     } catch (err) {
       // Fallback for unencrypted files

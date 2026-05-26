@@ -1,7 +1,7 @@
 {
-  "name": "mis-server-control",
-  "version": "1.4.0",
-  "description": "Control Panel for MIS Server",
+  "name": "kartoteka-launcher",
+  "version": "1.6.0",
+  "description": "Launcher for MIS Kartoteka",
   "main": "main.js",
   "scripts": {
     "start": "electron .",

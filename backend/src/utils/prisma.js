@@ -8,7 +8,8 @@ const encryptedFields = {
   Consultation: ['fullName', 'address', 'phoneNumber', 'relativeFullName', 'relativePhone', 'relativeAddress', 'diagnosis', 'notes', 'rank', 'militaryUnit', 'relativeRelation'],
   User: [],
   Document: ['originalName', 'filename'],
-  VvkConclusion: ['neurologistCategory', 'ophthalmologistCategory', 'dentistCategory', 'surgeonCategory', 'therapistCategory', 'finalCategory']
+  VvkConclusion: ['neurologistCategory', 'ophthalmologistCategory', 'dentistCategory', 'surgeonCategory', 'therapistCategory', 'finalCategory'],
+  AuditLog: ['details']
 };
 
 const deterministicFields = {

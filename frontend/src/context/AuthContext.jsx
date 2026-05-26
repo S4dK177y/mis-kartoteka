@@ -52,7 +52,6 @@ export const AuthProvider = ({ children }) => {
       console.error(err);
     } finally {
       setUser(null);
-      setIsLocked(true); // Treat logout as locked just in case
     }
   };
 

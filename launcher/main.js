@@ -148,6 +148,12 @@ ipcMain.handle('get-ips', () => {
   const networkInterfaces = os.networkInterfaces();
   const ips = [];
   for (const interfaceName in networkInterfaces) {
+    if (interfaceName.toLowerCase().includes('vmware') || 
+        interfaceName.toLowerCase().includes('virtual') || 
+        interfaceName.toLowerCase().includes('vethernet') ||
+        interfaceName.toLowerCase().includes('loopback')) {
+      continue;
+    }
     const interfaces = networkInterfaces[interfaceName];
     for (const info of interfaces) {
       if (info.family === 'IPv4' && !info.internal) {

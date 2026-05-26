@@ -1,6 +1,6 @@
 {
   "name": "backend",
-  "version": "1.4.0",
+  "version": "1.6.0",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
@@ -12,6 +12,8 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@li0ard/kuznyechik": "^0.1.5",
+    "@li0ard/streebog": "^0.2.6",
     "@prisma/client": "^5.22.0",
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",
@@ -21,6 +23,7 @@
     "express-rate-limit": "^8.5.2",
     "helmet": "^8.2.0",
     "jsonwebtoken": "^9.0.3",
+    "koffi": "^3.0.2",
     "multer": "^2.1.1",
     "sqlite3": "^6.0.1"
   },

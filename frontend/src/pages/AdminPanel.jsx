@@ -540,12 +540,13 @@ const AdminPanel = () => {
               </div>
               <div style={{ padding: '1rem 1.25rem', background: '#eff6ff' }} className="flex-col gap-0">
                 {[
-                  ['Алгоритм шифрования',         'AES-256-GCM'],
-                  ['Производная ключа',            'PBKDF2 · 100 000 итераций · SHA-256'],
-                  ['Случайный IV',                 'AES-256-GCM · 12 байт'],
-                  ['Детерминированный IV',         'HMAC-SHA256 (для поиска по жетону)'],
-                  ['Шифрование ключа шифрования',  'Envelope Encryption (KEK → DEK)'],
-                  ['Хранение мастер-ключа',        'Только в RAM — никогда не пишется на диск'],
+                  ['Шифрование данных',             'ГОСТ Р 34.12-2018 (Кузнечик-MGM)'],
+                  ['Вывод ключа (KDF)',              'PBKDF2-Стрибог-512 (ГОСТ Р 34.11-2012)'],
+                  ['Верификация пароля',             'HMAC-Стрибог-256 (ГОСТ Р 34.11-2012)'],
+                  ['Детерминированный IV',           'HMAC-Стрибог-256 (для поиска по жетону)'],
+                  ['Случайный IV / Salt',            'Windows CNG (BCryptGenRandom)'],
+                  ['Защита ключа шифрования',       'Envelope Encryption (KEK → DEK)'],
+                  ['Хранение мастер-ключа',          'Только в RAM — никогда не пишется на диск'],
                 ].map(([k, v]) => (
                   <div key={k} className="flex justify-between items-center" style={{ padding: '0.45rem 0', borderBottom: '1px solid #bfdbfe' }}>
                     <span style={{ fontSize: '0.82rem', color: '#3b82f6', fontWeight: 600 }}>{k}</span>
