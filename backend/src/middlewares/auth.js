@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
-
-const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key-for-mis-change-in-prod';
+const crypto = require('crypto');
+const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(64).toString('hex');
 
 const authenticateToken = (req, res, next) => {
   const token = req.cookies.token || (req.headers['authorization'] && req.headers['authorization'].split(' ')[1]);
