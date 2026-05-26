@@ -239,34 +239,86 @@ function decryptText(encryptedStr) {
 }
 
 /**
- * Encrypts a raw Buffer using GOST Kuznyechik MGM.
- * Output format: [16 bytes IV] + [ciphertext + auth tag]
+ * Encrypts a raw Buffer asynchronously using Hybrid Envelope Encryption.
+ * Bulk data: AES-256-GCM (Native, Fast)
+ * Key (DEK): GOST Kuznyechik-MGM (Domestic standard, protects the DEK)
  */
-function encryptBuffer(buffer) {
+async function encryptBufferAsync(buffer) {
   if (!buffer) return buffer;
   if (!masterKey) throw new Error('System is locked.');
 
-  const iv = cng.randomBytes(16);
-  const encrypted = encryptMGM(masterKey, buffer, iv, Buffer.alloc(0));
+  // 1. Generate random AES-256 DEK (32 bytes)
+  const crypto = require('crypto');
+  const dek = crypto.randomBytes(32);
+  
+  // 2. Encrypt buffer with AES-256-GCM
+  const aesIv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', dek, aesIv);
+  const aesCiphertext = Buffer.concat([cipher.update(buffer), cipher.final()]);
+  const aesTag = cipher.getAuthTag();
 
-  return Buffer.concat([iv, Buffer.from(encrypted)]);
+  // 3. Encrypt the DEK with GOST Kuznyechik-MGM using masterKey
+  const gostIv = cng.randomBytes(16);
+  const gostEncryptedDek = Buffer.from(encryptMGM(masterKey, dek, gostIv, Buffer.alloc(0)));
+
+  // 4. Assemble the final buffer
+  const magic = Buffer.from('HYBRID_GOST', 'utf8');
+  
+  return Buffer.concat([
+    magic,             // 11 bytes
+    gostIv,            // 16 bytes
+    gostEncryptedDek,  // 48 bytes (32 byte DEK + 16 byte Tag)
+    aesIv,             // 12 bytes
+    aesTag,            // 16 bytes
+    aesCiphertext      // N bytes
+  ]);
 }
 
 /**
- * Decrypts a raw Buffer.
- * Expects: [16 bytes IV] + [ciphertext + auth tag]
+ * Decrypts a raw Buffer asynchronously.
+ * Handles both the new HYBRID_GOST format and the legacy Full GOST format.
  */
-function decryptBuffer(buffer) {
+async function decryptBufferAsync(buffer) {
   if (!buffer || buffer.length < 32) return buffer;
   if (!masterKey) return buffer;
 
+  const crypto = require('crypto');
+  const magic = Buffer.from('HYBRID_GOST', 'utf8');
+  const isHybrid = buffer.length >= 103 && buffer.subarray(0, 11).equals(magic);
+
+  if (isHybrid) {
+    try {
+      let offset = 11;
+      const gostIv = buffer.subarray(offset, offset + 16); offset += 16;
+      const gostEncryptedDek = buffer.subarray(offset, offset + 48); offset += 48;
+      const aesIv = buffer.subarray(offset, offset + 12); offset += 12;
+      const aesTag = buffer.subarray(offset, offset + 16); offset += 16;
+      const aesCiphertext = buffer.subarray(offset);
+
+      // Decrypt DEK with GOST
+      const dek = Buffer.from(decryptMGM(masterKey, gostEncryptedDek, gostIv, Buffer.alloc(0)));
+
+      // Decrypt file with AES
+      const decipher = crypto.createDecipheriv('aes-256-gcm', dek, aesIv);
+      decipher.setAuthTag(aesTag);
+      const decrypted = Buffer.concat([decipher.update(aesCiphertext), decipher.final()]);
+      
+      return decrypted;
+    } catch (err) {
+      console.error('Hybrid buffer decryption error:', err.message);
+      return buffer;
+    }
+  }
+
+  // Fallback for files encrypted the old slow way (Full GOST)
+  // Expects: [16 bytes IV] + [ciphertext + auth tag]
   try {
     const iv = buffer.subarray(0, 16);
     const encrypted = buffer.subarray(16);
     const decrypted = decryptMGM(masterKey, encrypted, iv, Buffer.alloc(0));
     return Buffer.from(decrypted);
   } catch (err) {
-    console.error('Buffer decryption error:', err.message);
+    console.error('Legacy buffer decryption error:', err.message);
     return buffer;
   }
 }
@@ -288,8 +340,8 @@ module.exports = {
   encryptText,
   encryptDeterministic,
   decryptText,
-  encryptBuffer,
-  decryptBuffer,
+  encryptBufferAsync,
+  decryptBufferAsync,
   getMasterKey,
   changePassword,
   initGost

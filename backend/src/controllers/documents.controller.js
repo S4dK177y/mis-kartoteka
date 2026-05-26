@@ -45,7 +45,7 @@ exports.upload = async (req, res) => {
     if (!fs.existsSync(entityDir)) fs.mkdirSync(entityDir, { recursive: true });
     
     const filePath = path.join(entityDir, filename);
-    const finalBuffer = cryptoUtil.encryptBuffer(file.buffer);
+    const finalBuffer = await cryptoUtil.encryptBufferAsync(file.buffer);
     fs.writeFileSync(filePath, finalBuffer);
 
     await logAction(req.user.id, 'UPLOAD', 'Document', document.id, { originalName: file.originalname, entityId });
@@ -102,7 +102,7 @@ exports.uploadVvk = async (req, res) => {
     if (!fs.existsSync(entityDir)) fs.mkdirSync(entityDir, { recursive: true });
     const filePath = path.join(entityDir, filename);
     
-    const finalBuffer = cryptoUtil.encryptBuffer(file.buffer);
+    const finalBuffer = await cryptoUtil.encryptBufferAsync(file.buffer);
     fs.writeFileSync(filePath, finalBuffer);
 
     await logAction(req.user.id, 'UPLOAD', 'Document VVK', document.id, { originalName: file.originalname, consultationId });
@@ -148,7 +148,7 @@ exports.download = async (req, res) => {
     // we can either assume it's encrypted (if encryption is initialized) or check a magic signature.
     // Assuming all new files are encrypted:
     try {
-      const decrypted = cryptoUtil.decryptBuffer(fileBuffer);
+      const decrypted = await cryptoUtil.decryptBufferAsync(fileBuffer);
       res.send(decrypted);
     } catch (err) {
       // Fallback for unencrypted files
