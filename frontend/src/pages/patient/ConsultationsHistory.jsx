@@ -2,9 +2,16 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Activity, FileText } from 'lucide-react';
 import { Card } from '../../components/ui';
+import { useAuth } from '../../context/AuthContext';
+
+const getTypeLabel = (type) => {
+  const map = { PRIMARY: 'Первичный', SECONDARY: 'Повторный', PREVENTIVE: 'Профилактический', VVK: 'ВВК' };
+  return map[type] || type;
+};
 
 export const ConsultationsHistory = ({ patient, consultationTypeFilter, setConsultationTypeFilter }) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   return (
     <>
@@ -70,7 +77,9 @@ export const ConsultationsHistory = ({ patient, consultationTypeFilter, setConsu
           </div>
           <select className="input-field" style={{ width: 'auto', padding: '6px 12px' }} value={consultationTypeFilter} onChange={e => setConsultationTypeFilter(e.target.value)}>
             <option value="ALL">Все приемы</option>
-            <option value="REGULAR">Обычные</option>
+            <option value="PRIMARY">Первичный</option>
+            <option value="SECONDARY">Повторный</option>
+            <option value="PREVENTIVE">Профилактический</option>
             <option value="VVK">ВВК</option>
           </select>
         </div>
@@ -85,8 +94,8 @@ export const ConsultationsHistory = ({ patient, consultationTypeFilter, setConsu
               <thead>
                 <tr style={{ borderBottom: '2px solid var(--border)', textAlign: 'left', color: 'var(--text-muted)' }}>
                   <th style={{ padding: '10px' }}>Дата приема</th>
-                  <th style={{ padding: '10px' }}>Тип</th>
-                  <th style={{ padding: '10px' }}>Диагноз</th>
+                  {user?.role === 'ADMIN' && <th style={{ padding: '10px' }}>Врач</th>}
+                  <th style={{ padding: '10px' }}>Подробности</th>
                   <th style={{ padding: '10px' }}>Следующий визит</th>
                 </tr>
               </thead>
@@ -98,6 +107,11 @@ export const ConsultationsHistory = ({ patient, consultationTypeFilter, setConsu
                     <td style={{ padding: '10px' }}>
                       {new Date(consult.consultationDate).toLocaleDateString('ru-RU')}
                     </td>
+                    {user?.role === 'ADMIN' && (
+                      <td style={{ padding: '10px', color: 'var(--text-muted)' }}>
+                        {consult.doctor ? (consult.doctor.fullName || consult.doctor.username) : '—'}
+                      </td>
+                    )}
                     <td style={{ padding: '10px' }}>
                       <div className="mb-1">
                         {consult.type === 'VVK' ? (
@@ -105,7 +119,7 @@ export const ConsultationsHistory = ({ patient, consultationTypeFilter, setConsu
                             ВВК {consult.vvkConclusion?.status === 'COMPLETED' ? '(Завершено)' : '(В процессе)'}
                           </span>
                         ) : (
-                          <span className="text-muted" style={{ fontSize: '0.8rem' }}>Обычный</span>
+                          <span className="text-muted" style={{ fontSize: '0.8rem' }}>{getTypeLabel(consult.type)}</span>
                         )}
                       </div>
                       <div style={{ maxWidth: '400px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={consult.diagnosis || 'Нет диагноза'}>

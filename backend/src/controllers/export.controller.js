@@ -67,9 +67,14 @@ exports.exportPatients = async (req, res) => {
       });
     });
 
+    const getTypeLabel = (type) => {
+      const map = { PRIMARY: 'Первичный', SECONDARY: 'Повторный', PREVENTIVE: 'Профилактический', VVK: 'ВВК' };
+      return map[type] || 'Обычный';
+    };
+
     consultations.forEach(c => {
       worksheet.addRow({
-        recordType: 'Амбулатория',
+        recordType: `Амбулатория (${getTypeLabel(c.type)})`,
         caseHistoryNumber: '-',
         date: c.consultationDate.toISOString().split('T')[0],
         time: c.consultationDate.toISOString().split('T')[1].substring(0, 5),

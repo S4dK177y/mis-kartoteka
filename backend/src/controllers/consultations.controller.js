@@ -3,13 +3,16 @@ const { logAction } = require('../utils/logger');
 
 exports.getAll = async (req, res) => {
   try {
+    const where = req.user.role === 'ADMIN' ? {} : { doctorId: req.user.id };
     const consultations = await prisma.consultation.findMany({ 
+      where,
       include: {
         documents: {
           include: { uploader: { select: { username: true } } },
           orderBy: { createdAt: 'desc' }
         },
-        vvkConclusion: true
+        vvkConclusion: true,
+        doctor: { select: { username: true, fullName: true } }
       },
       orderBy: { consultationDate: 'desc' } 
     });
@@ -28,7 +31,8 @@ exports.getById = async (req, res) => {
           include: { uploader: { select: { username: true } } },
           orderBy: { createdAt: 'desc' }
         },
-        vvkConclusion: true
+        vvkConclusion: true,
+        doctor: { select: { username: true, fullName: true } }
       }
     });
 
@@ -103,7 +107,7 @@ exports.create = async (req, res) => {
         personId: finalPersonId, tokenNumber, rank, militaryUnit, militaryStatus, isSvoParticipant: Boolean(isSvoParticipant),
         fullName, birthDate: birthDate ? new Date(birthDate) : undefined, address, phoneNumber, relativeRelation, relativeFullName, relativePhone, relativeAddress,
         diagnosis, consultationDate: consultationDate ? new Date(consultationDate) : new Date(), nextConsultationDate: nextConsultationDate ? new Date(nextConsultationDate) : null,
-        notes, doctorId: req.user.id, type: type || 'REGULAR',
+        notes, doctorId: (req.user.role === 'ADMIN' && req.body.doctorId) ? req.body.doctorId : req.user.id, type: type || 'PRIMARY',
         ...(type === 'VVK' && vvkConclusion ? {
           vvkConclusion: {
             create: {
@@ -142,7 +146,8 @@ exports.update = async (req, res) => {
         tokenNumber, rank, militaryUnit, militaryStatus, isSvoParticipant: Boolean(isSvoParticipant),
         fullName, birthDate: birthDate ? new Date(birthDate) : undefined, address, phoneNumber, relativeRelation, relativeFullName, relativePhone, relativeAddress,
         diagnosis, consultationDate: consultationDate ? new Date(consultationDate) : undefined, nextConsultationDate: nextConsultationDate ? new Date(nextConsultationDate) : null, notes,
-        type: type || 'REGULAR',
+        ...(req.user.role === 'ADMIN' && req.body.doctorId ? { doctorId: req.body.doctorId } : {}),
+        type: type || 'PRIMARY',
         ...(type === 'VVK' && vvkConclusion ? {
           vvkConclusion: {
             upsert: {

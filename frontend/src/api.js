@@ -121,23 +121,23 @@ export const api = {
     return res.json();
   },
 
-  createUser: async (username, password, role) => {
+  createUser: async (username, password, role, fullName) => {
     const res = await fetchWithAuth(`${API_URL}/users`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password, role })
+      body: JSON.stringify({ username, password, role, fullName })
     });
     if (!res.ok) throw new Error('Failed to create user');
     return res.json();
   },
 
-  updateUserRole: async (userId, role) => {
-    const res = await fetchWithAuth(`${API_URL}/users/${userId}/role`, {
+  updateUser: async (userId, role, fullName) => {
+    const res = await fetchWithAuth(`${API_URL}/users/${userId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ role })
+      body: JSON.stringify({ role, fullName })
     });
-    if (!res.ok) throw new Error('Failed to update role');
+    if (!res.ok) throw new Error('Failed to update user');
     return res.json();
   },
 
@@ -380,5 +380,6 @@ export const api = {
   },
 
   exportPatientsUrl: `${API_URL}/export/patients`,
+  exportDoctorsReportUrl: `${API_URL}/export/doctors-monthly`,
   getDocumentUrl: (id) => `${API_URL}/documents/${id}`
 };

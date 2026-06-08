@@ -5,7 +5,7 @@ const { logAction } = require('../utils/logger');
 exports.getUsers = async (req, res) => {
   try {
     const users = await prisma.user.findMany({
-      select: { id: true, username: true, role: true, createdAt: true },
+      select: { id: true, username: true, fullName: true, role: true, createdAt: true },
       orderBy: { createdAt: 'desc' }
     });
     res.json(users);
@@ -16,13 +16,13 @@ exports.getUsers = async (req, res) => {
 
 exports.createUser = async (req, res) => {
   try {
-    const { username, password, role } = req.body;
+    const { username, password, role, fullName } = req.body;
     if (!username || !password) return res.status(400).json({ error: 'Missing credentials' });
 
     const hash = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
-      data: { username, passwordHash: hash, role: role || 'DOCTOR' },
-      select: { id: true, username: true, role: true, createdAt: true }
+      data: { username, passwordHash: hash, fullName, role: role || 'DOCTOR' },
+      select: { id: true, username: true, fullName: true, role: true, createdAt: true }
     });
     
     await logAction(req.user.id, 'CREATE', 'User', user.id, { username, role });
@@ -32,15 +32,19 @@ exports.createUser = async (req, res) => {
   }
 };
 
-exports.updateUserRole = async (req, res) => {
+exports.updateUser = async (req, res) => {
   try {
-    const { role } = req.body;
+    const { role, fullName } = req.body;
+    const dataToUpdate = {};
+    if (role !== undefined) dataToUpdate.role = role;
+    if (fullName !== undefined) dataToUpdate.fullName = fullName;
+
     const user = await prisma.user.update({
       where: { id: req.params.id },
-      data: { role },
-      select: { id: true, username: true, role: true, createdAt: true }
+      data: dataToUpdate,
+      select: { id: true, username: true, fullName: true, role: true, createdAt: true }
     });
-    await logAction(req.user.id, 'UPDATE', 'User', user.id, { newRole: role });
+    await logAction(req.user.id, 'UPDATE', 'User', user.id, dataToUpdate);
     res.json(user);
   } catch (err) {
     res.status(400).json({ error: 'Failed to update user role' });
@@ -135,6 +139,12 @@ exports.migrateEncryption = async (req, res) => {
       for (const f of fields) {
         if (c[f] !== undefined && c[f] !== null) dataToUpdate[f] = c[f];
       }
+      
+      // Migrate REGULAR to PRIMARY
+      if (c.type === 'REGULAR') {
+        dataToUpdate.type = 'PRIMARY';
+      }
+
       if (Object.keys(dataToUpdate).length > 0) {
         await prisma.consultation.update({ where: { id: c.id }, data: dataToUpdate });
         cCount++;

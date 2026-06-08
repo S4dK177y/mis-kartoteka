@@ -8,9 +8,9 @@ import { ru } from 'date-fns/locale';
 import { usePhoneMask } from '../hooks/usePhoneMask';
 import { Card, Button, DocumentCard, DocumentUploader } from '../components/ui';
 
+import { useAuth } from '../context/AuthContext';
 import { PatientDataSection } from './consultation/PatientDataSection';
 import { AnamnesisSection } from './consultation/AnamnesisSection';
-import { ObjectiveStatusSection } from './consultation/ObjectiveStatusSection';
 import { VVKSection } from './consultation/VVKSection';
 
 export default function ConsultationForm() {
@@ -20,6 +20,8 @@ export default function ConsultationForm() {
   const isEditing = Boolean(id);
   const prefillData = location.state?.prefillData || null;
   const { handlePhoneChange } = usePhoneMask();
+  const { user } = useAuth();
+  const [doctors, setDoctors] = useState([]);
   
   const [formData, setFormData] = useState({
     personId: prefillData?.personId || '',
@@ -37,8 +39,8 @@ export default function ConsultationForm() {
     relativeAddress: prefillData?.relativeAddress || '',
     diagnosis: '',
     notes: '',
-    objectiveStatus: '', // New field, might need backend support later
-    type: 'REGULAR',
+    type: 'PRIMARY',
+    doctorId: user?.id || ''
   });
   
   const [vvkConclusion, setVvkConclusion] = useState({
@@ -68,7 +70,12 @@ export default function ConsultationForm() {
 
   useEffect(() => {
     if (isEditing) fetchConsultation();
-  }, [id]);
+    if (user?.role === 'ADMIN') {
+      api.getUsers().then(users => {
+        setDoctors(users.filter(u => u.role === 'DOCTOR' || u.role === 'ADMIN'));
+      }).catch(console.error);
+    }
+  }, [id, user]);
 
   const fetchConsultation = async () => {
     if (!id) return;
@@ -92,8 +99,8 @@ export default function ConsultationForm() {
         relativeAddress: data.relativeAddress || '',
         diagnosis: data.diagnosis || '',
         notes: data.notes || '',
-        objectiveStatus: data.objectiveStatus || '',
-        type: data.type || 'REGULAR'
+        type: data.type || 'PRIMARY',
+        doctorId: data.doctorId || ''
       });
 
       if (data.vvkConclusion) {
@@ -308,12 +315,20 @@ export default function ConsultationForm() {
 
       <form onSubmit={handleSubmit}>
         <Card className="p-4 mb-4">
-          <div className="flex items-center gap-4 mb-4 pb-2 border-b">
-            <h3 className="text-lg m-0 text-primary">Тип приема</h3>
-            <div className="flex gap-4 ml-4">
+          <div className="flex items-center gap-4 mb-4 pb-2 border-b flex-wrap">
+            <h3 className="text-lg m-0 text-primary w-full sm:w-auto">Тип приема</h3>
+            <div className="flex gap-4 sm:ml-4 flex-wrap">
               <label className="flex items-center gap-2 cursor-pointer">
-                <input type="radio" name="type" value="REGULAR" checked={formData.type === 'REGULAR'} onChange={handleChange} />
-                <span>Обычный прием</span>
+                <input type="radio" name="type" value="PRIMARY" checked={formData.type === 'PRIMARY'} onChange={handleChange} />
+                <span>Первичный</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="type" value="SECONDARY" checked={formData.type === 'SECONDARY'} onChange={handleChange} />
+                <span>Повторный</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="type" value="PREVENTIVE" checked={formData.type === 'PREVENTIVE'} onChange={handleChange} />
+                <span>Профилактический</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="radio" name="type" value="VVK" checked={formData.type === 'VVK'} onChange={handleChange} />
@@ -321,6 +336,17 @@ export default function ConsultationForm() {
               </label>
             </div>
           </div>
+          {user?.role === 'ADMIN' && (
+            <div className="input-group mb-4 pb-4 border-b">
+              <label className="input-label">Врач (только для Администратора)</label>
+              <select className="input-field" name="doctorId" value={formData.doctorId} onChange={handleChange}>
+                <option value="">-- Выберите врача --</option>
+                {doctors.map(doc => (
+                  <option key={doc.id} value={doc.id}>{doc.fullName || doc.username}</option>
+                ))}
+              </select>
+            </div>
+          )}
           <PatientDataSection 
             formData={formData} 
             handleChange={handleChange} 
@@ -342,7 +368,6 @@ export default function ConsultationForm() {
             </div>
           </div>
           <AnamnesisSection formData={formData} handleChange={handleChange} />
-          <ObjectiveStatusSection formData={formData} handleChange={handleChange} />
         </Card>
 
         {formData.type === 'VVK' && (

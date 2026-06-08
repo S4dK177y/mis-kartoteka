@@ -69,6 +69,7 @@ exports.getById = async (req, res) => {
       });
       consultations = await prisma.consultation.findMany({
         where: { personId: patient.personId },
+        include: { doctor: { select: { fullName: true, username: true } }, vvkConclusion: true },
         orderBy: { consultationDate: 'desc' }
       });
     }

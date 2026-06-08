@@ -16,6 +16,7 @@ import LockScreen from './pages/LockScreen';
 import AdminPanel from './pages/AdminPanel';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import { ReportsDropdown } from './components/ui';
 import './index.css';
 
 const Header = () => {
@@ -43,20 +44,20 @@ const Header = () => {
 
       <div className={`header-content ${mobileMenuOpen ? 'open' : ''}`}>
         <nav className="header-nav flex gap-4" style={{ marginLeft: '1rem' }}>
-          <Link to="/" className={`nav-link ${location.pathname === '/' ? 'active' : ''}`} onClick={() => setMobileMenuOpen(false)}>Стационар</Link>
+          {user?.role === 'ADMIN' && <Link to="/" className={`nav-link ${location.pathname === '/' ? 'active' : ''}`} onClick={() => setMobileMenuOpen(false)}>Стационар</Link>}
           <Link to="/consultations" className={`nav-link ${location.pathname.startsWith('/consultations') ? 'active' : ''}`} onClick={() => setMobileMenuOpen(false)}>Амбулатория</Link>
-          <Link to="/persons" className={`nav-link ${location.pathname.startsWith('/persons') ? 'active' : ''}`} onClick={() => setMobileMenuOpen(false)}>Все пациенты</Link>
+          {user?.role === 'ADMIN' && <Link to="/persons" className={`nav-link ${location.pathname.startsWith('/persons') ? 'active' : ''}`} onClick={() => setMobileMenuOpen(false)}>Все пациенты</Link>}
         </nav>
         
         <div className="header-actions flex gap-4 items-center">
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            <a href={api.exportPatientsUrl} className="btn btn-outline" download title="Экспорт в Excel (Стационар и Амбулатория)">
-              <Download size={18} /> <span className="hide-on-mobile">Экспорт</span>
-            </a>
-            <Link to="/patients/new" className="btn btn-primary" title="Новая госпитализация" onClick={() => setMobileMenuOpen(false)}>
-              <Plus size={18} />
-              <span className="hide-on-mobile">Госпитализация</span>
-            </Link>
+            {user?.role === 'ADMIN' && <ReportsDropdown />}
+            {user?.role === 'ADMIN' && (
+              <Link to="/patients/new" className="btn btn-primary" title="Новая госпитализация" onClick={() => setMobileMenuOpen(false)}>
+                <Plus size={18} />
+                <span className="hide-on-mobile">Госпитализация</span>
+              </Link>
+            )}
             <Link to="/consultations/new" className="btn btn-secondary" title="Новая консультация" onClick={() => setMobileMenuOpen(false)}>
               <Plus size={18} />
               <span className="hide-on-mobile">Консультация</span>
@@ -87,6 +88,7 @@ const Header = () => {
 };
 
 const AppRoutes = () => {
+  const { user } = useAuth();
   return (
     <div className="app-container">
       <Header />
@@ -96,7 +98,7 @@ const AppRoutes = () => {
           <Route path="/setup" element={<Setup />} />
           <Route path="/locked" element={<LockScreen />} />
           
-          <Route path="/" element={<ProtectedRoute><PatientList /></ProtectedRoute>} />
+          <Route path="/" element={<ProtectedRoute>{user?.role === 'DOCTOR' ? <ConsultationList /> : <PatientList />}</ProtectedRoute>} />
           <Route path="/consultations" element={<ProtectedRoute><ConsultationList /></ProtectedRoute>} />
           <Route path="/persons" element={<ProtectedRoute><PersonList /></ProtectedRoute>} />
           <Route path="/persons/:id" element={<ProtectedRoute><PersonProfile /></ProtectedRoute>} />
@@ -110,7 +112,7 @@ const AppRoutes = () => {
           <Route path="/consultations/:id" element={<ProtectedRoute><ConsultationProfile /></ProtectedRoute>} />
           <Route path="/consultations/:id/edit" element={<ProtectedRoute><ConsultationForm /></ProtectedRoute>} />
           
-          <Route path="*" element={<ProtectedRoute><PatientList /></ProtectedRoute>} />
+          <Route path="*" element={<ProtectedRoute>{user?.role === 'DOCTOR' ? <ConsultationList /> : <PatientList />}</ProtectedRoute>} />
         </Routes>
       </main>
     </div>

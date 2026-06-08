@@ -14,11 +14,13 @@ model User {
   id           String   @id @default(uuid())
   username     String   @unique
   passwordHash String
+  fullName     String?
   role         String   @default("DOCTOR") // ADMIN, DOCTOR
   createdAt    DateTime @default(now())
 
-  documents Document[]
-  logs      AuditLog[]
+  documents     Document[]
+  logs          AuditLog[]
+  consultations Consultation[]
 }
 
 model AuditLog {
@@ -121,6 +123,7 @@ model Consultation {
 
   documents     Document[]
   vvkConclusion VvkConclusion?
+  doctor        User?      @relation(fields: [doctorId], references: [id])
 }
 
 model VvkConclusion {

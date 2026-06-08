@@ -4,6 +4,11 @@ import { ArrowLeft, Activity, FileText } from 'lucide-react';
 import { api } from '../api';
 import { DocumentCard, DocumentViewer } from '../components/ui';
 
+const getTypeLabel = (type) => {
+  const map = { PRIMARY: 'Первичный', SECONDARY: 'Повторный', PREVENTIVE: 'Профилактический', VVK: 'ВВК' };
+  return map[type] || type;
+};
+
 export default function PersonProfile() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -158,7 +163,7 @@ export default function PersonProfile() {
             <div className="flex gap-2">
               <button className={`btn btn-sm ${historyFilter === 'all' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setHistoryFilter('all')}>Все</button>
               <button className={`btn btn-sm ${historyFilter === 'hospitalization' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setHistoryFilter('hospitalization')}>Госпитализации</button>
-              <button className={`btn btn-sm ${historyFilter === 'consultation' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setHistoryFilter('consultation')}>Обычные приемы</button>
+              <button className={`btn btn-sm ${historyFilter === 'consultation' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setHistoryFilter('consultation')}>Амбулаторные приемы</button>
               <button className={`btn btn-sm ${historyFilter === 'vvk' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setHistoryFilter('vvk')}>ВВК</button>
             </div>
           </div>
@@ -188,7 +193,7 @@ export default function PersonProfile() {
                         </td>
                         <td className="p-4 text-sm text-muted">
                           {isHosp && <span className="flex items-center gap-1"><Activity size={14} className="text-primary"/> Госпитализация</span>}
-                          {isConsult && <span className="flex items-center gap-1"><FileText size={14} className="text-secondary"/> Обычный прием</span>}
+                          {isConsult && <span className="flex items-center gap-1"><FileText size={14} className="text-secondary"/> {getTypeLabel(item.type)} прием</span>}
                           {isVvk && <span className="flex items-center gap-1" style={{ color: '#4338ca', fontWeight: 600 }}><FileText size={14} /> ВВК</span>}
                         </td>
                         <td className="p-4 text-sm">

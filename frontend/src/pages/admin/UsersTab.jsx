@@ -4,12 +4,14 @@ import { useAdmin } from '../../hooks/useAdmin';
 import { Card, Button, Badge } from '../../components/ui';
 
 export const UsersTab = () => {
-  const { users, userLoading, userError, fetchUsers, createUser, updateUserRole } = useAdmin();
+  const { users, userLoading, userError, fetchUsers, createUser, updateUser } = useAdmin();
   const [newUsername, setNewUsername] = useState('');
+  const [newFullName, setNewFullName] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newRole, setNewRole] = useState('DOCTOR');
   const [editingUserId, setEditingUserId] = useState(null);
   const [editingRole, setEditingRole] = useState('');
+  const [editingFullName, setEditingFullName] = useState('');
   const [localError, setLocalError] = useState('');
 
   useEffect(() => {
@@ -20,16 +22,17 @@ export const UsersTab = () => {
     e.preventDefault();
     setLocalError('');
     if (newPassword.length < 6) return setLocalError('Пароль должен быть не менее 6 символов');
-    const res = await createUser(newUsername, newPassword, newRole);
+    const res = await createUser(newUsername, newPassword, newRole, newFullName);
     if (res.success) {
       setNewUsername('');
+      setNewFullName('');
       setNewPassword('');
       setNewRole('DOCTOR');
     }
   };
 
-  const handleUpdateRole = async (userId) => {
-    const success = await updateUserRole(userId, editingRole);
+  const handleUpdateUser = async (userId) => {
+    const success = await updateUser(userId, editingRole, editingFullName);
     if (success) setEditingUserId(null);
   };
 
@@ -50,6 +53,10 @@ export const UsersTab = () => {
           <div className="input-group">
             <label className="input-label">Логин</label>
             <input type="text" className="input-field" value={newUsername} onChange={e => setNewUsername(e.target.value)} required placeholder="Введите логин" />
+          </div>
+          <div className="input-group">
+            <label className="input-label">ФИО (для врачей)</label>
+            <input type="text" className="input-field" value={newFullName} onChange={e => setNewFullName(e.target.value)} placeholder="Иванов И.И." />
           </div>
           <div className="input-group">
             <label className="input-label">Пароль</label>
@@ -77,6 +84,7 @@ export const UsersTab = () => {
             <thead>
               <tr style={{ borderBottom: '2px solid var(--border)' }}>
                 <th>Логин</th>
+                <th>ФИО</th>
                 <th>Роль</th>
                 <th>Добавлен</th>
                 <th style={{ textAlign: 'right' }}>Действия</th>
@@ -92,6 +100,13 @@ export const UsersTab = () => {
                       </div>
                       {u.username}
                     </div>
+                  </td>
+                  <td style={{ padding: '0.85rem 1rem' }}>
+                    {editingUserId === u.id ? (
+                      <input type="text" className="input-field" style={{ padding: '0.2rem 0.5rem', fontSize: '0.82rem' }} value={editingFullName} onChange={e => setEditingFullName(e.target.value)} placeholder="ФИО" />
+                    ) : (
+                      u.fullName || <span className="text-muted">Не указано</span>
+                    )}
                   </td>
                   <td style={{ padding: '0.85rem 1rem' }}>
                     {editingUserId === u.id ? (
@@ -112,13 +127,13 @@ export const UsersTab = () => {
                     {editingUserId === u.id ? (
                       <div className="flex gap-2 justify-end">
                         <Button variant="outline" style={{ padding: '0.2rem 0.6rem', fontSize: '0.8rem' }} onClick={() => setEditingUserId(null)}>Отмена</Button>
-                        <Button variant="primary" style={{ padding: '0.2rem 0.6rem', fontSize: '0.8rem' }} onClick={() => handleUpdateRole(u.id)}>
+                        <Button variant="primary" style={{ padding: '0.2rem 0.6rem', fontSize: '0.8rem' }} onClick={() => handleUpdateUser(u.id)}>
                           <Save size={13} /> Сохранить
                         </Button>
                       </div>
                     ) : (
-                      <Button variant="outline" style={{ padding: '0.2rem 0.6rem', fontSize: '0.8rem' }} onClick={() => { setEditingUserId(u.id); setEditingRole(u.role); }}>
-                        Изменить роль
+                      <Button variant="outline" style={{ padding: '0.2rem 0.6rem', fontSize: '0.8rem' }} onClick={() => { setEditingUserId(u.id); setEditingRole(u.role); setEditingFullName(u.fullName || ''); }}>
+                        Изменить
                       </Button>
                     )}
                   </td>

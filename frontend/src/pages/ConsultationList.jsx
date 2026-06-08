@@ -2,11 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Plus, SortAsc } from 'lucide-react';
 import { api } from '../api';
+import { useAuth } from '../context/AuthContext';
+
+const getTypeLabel = (type) => {
+  const map = { PRIMARY: 'Первичный', SECONDARY: 'Повторный', PREVENTIVE: 'Профилактический', VVK: 'ВВК' };
+  return map[type] || type;
+};
 
 export default function ConsultationList() {
   const [consultations, setConsultations] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   // Filters
   const [search, setSearch] = useState('');
@@ -159,7 +166,9 @@ export default function ConsultationList() {
                     style={{ fontSize: '0.75rem', padding: '0.2rem 0.4rem', border: '1px solid var(--border)', borderRadius: '4px', width: '100%', outline: 'none', background: 'var(--bg-input)' }}
                   >
                     <option value="">Все</option>
-                    <option value="REGULAR">Обычный</option>
+                    <option value="PRIMARY">Первичный</option>
+                    <option value="SECONDARY">Повторный</option>
+                    <option value="PREVENTIVE">Профилактический</option>
                     <option value="VVK">ВВК</option>
                   </select>
                 </th>
@@ -177,6 +186,13 @@ export default function ConsultationList() {
                     {uniqueDiagnoses.map(d => <option key={d} value={d}>{d}</option>)}
                   </select>
                 </th>
+                {user?.role === 'ADMIN' && (
+                  <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', width: '120px' }}>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }}>
+                      Врач
+                    </div>
+                  </th>
+                )}
                 <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', width: '130px' }}>
                   <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }} className="flex items-center gap-1 cursor-pointer hover:text-primary" onClick={() => handleSort('consultationDate')}>
                     Дата приема <SortIcon field="consultationDate" />
@@ -239,7 +255,7 @@ export default function ConsultationList() {
                         ВВК {consult.vvkConclusion?.status === 'COMPLETED' ? '(Завершено)' : '(В процессе)'}
                       </span>
                     ) : (
-                      <span className="text-muted" style={{ fontSize: '0.8rem' }}>Обычный</span>
+                      <span className="text-muted" style={{ fontSize: '0.8rem' }}>{getTypeLabel(consult.type)}</span>
                     )}
                   </td>
                   <td style={{ fontSize: '0.75rem' }}>
@@ -255,6 +271,11 @@ export default function ConsultationList() {
                       </div>
                     )}
                   </td>
+                  {user?.role === 'ADMIN' && (
+                    <td style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      {consult.doctor ? (consult.doctor.fullName || consult.doctor.username) : '—'}
+                    </td>
+                  )}
                   <td className="text-muted" style={{ fontSize: '0.75rem' }}>
                     {new Date(consult.consultationDate).toLocaleDateString('ru-RU')}
                     <br/>

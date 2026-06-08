@@ -3,6 +3,12 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Edit, Trash2, Calendar, FileText, User } from 'lucide-react';
 import { api } from '../api';
 import { DocumentCard, DocumentViewer } from '../components/ui';
+import { useAuth } from '../context/AuthContext';
+
+const getTypeLabel = (type) => {
+  const map = { PRIMARY: 'Первичный', SECONDARY: 'Повторный', PREVENTIVE: 'Профилактический', VVK: 'ВВК' };
+  return map[type] || type;
+};
 
 export default function ConsultationProfile() {
   const { id } = useParams();
@@ -10,6 +16,7 @@ export default function ConsultationProfile() {
   const [consultation, setConsultation] = useState(null);
   const [loading, setLoading] = useState(true);
   const [viewingFile, setViewingFile] = useState(null);
+  const { user } = useAuth();
 
   useEffect(() => {
     fetchConsultation();
@@ -62,7 +69,7 @@ export default function ConsultationProfile() {
                   ВВК {vvk?.status === 'COMPLETED' ? '(Завершено)' : '(В процессе)'}
                 </span>
               ) : (
-                <span className="text-muted">Обычный прием</span>
+                <span className="text-muted">{getTypeLabel(consultation.type)} прием</span>
               )}
             </div>
           </div>
@@ -116,6 +123,12 @@ export default function ConsultationProfile() {
               <div className="text-xs text-muted mb-1">Дата приема</div>
               <div className="font-semibold">{new Date(consultation.consultationDate).toLocaleString('ru-RU')}</div>
             </div>
+            {user?.role === 'ADMIN' && (
+              <div>
+                <div className="text-xs text-muted mb-1">Врач</div>
+                <div className="font-semibold">{consultation.doctor ? (consultation.doctor.fullName || consultation.doctor.username) : '—'}</div>
+              </div>
+            )}
             <div>
               <div className="text-xs text-muted mb-1">Следующий визит</div>
               <div className="font-semibold" style={{ color: 'var(--primary)' }}>

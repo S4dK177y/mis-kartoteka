@@ -19,7 +19,11 @@ exports.getById = async (req, res) => {
     const { personId } = req.params;
     
     const patients = await prisma.patient.findMany({ where: { personId }, orderBy: { createdAt: 'desc' } });
-    const consultations = await prisma.consultation.findMany({ where: { personId }, orderBy: { createdAt: 'desc' } });
+    const consultations = await prisma.consultation.findMany({ 
+      where: { personId }, 
+      include: { doctor: { select: { fullName: true, username: true } } },
+      orderBy: { createdAt: 'desc' } 
+    });
     const documents = await prisma.document.findMany({ 
       where: { personId }, 
       include: { uploader: { select: { username: true } } },

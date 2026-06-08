@@ -29,11 +29,11 @@ export function useAdmin() {
     setUsers(data);
   }, []);
 
-  const createUser = async (username, password, role) => {
+  const createUser = async (username, password, role, fullName) => {
     setUserLoading(true);
     setUserError('');
     try {
-      await api.createUser(username, password, role);
+      await api.createUser(username, password, role, fullName);
       await fetchUsers();
       return { success: true };
     } catch (err) {
@@ -45,9 +45,9 @@ export function useAdmin() {
     }
   };
 
-  const updateUserRole = async (userId, role) => {
+  const updateUser = async (userId, role, fullName) => {
     try {
-      await api.updateUserRole(userId, role);
+      await api.updateUser(userId, role, fullName);
       await fetchUsers();
       return true;
     } catch {
@@ -182,7 +182,7 @@ export function useAdmin() {
 
   return {
     // Users
-    users, userLoading, userError, fetchUsers, createUser, updateUserRole,
+    users, userLoading, userError, fetchUsers, createUser, updateUser,
     // Logs
     logs, logStats, settings, settingsLoading, fetchLogs, saveSettings,
     // Backups

@@ -12,14 +12,18 @@ const tmpUpload = multer({ dest: os.tmpdir() });
 
 router.get('/users', authenticateToken, requireAdmin, adminController.getUsers);
 router.post('/users', authenticateToken, requireAdmin, adminController.createUser);
-router.put('/users/:id/role', authenticateToken, requireAdmin, adminController.updateUserRole);
+router.put('/users/:id', authenticateToken, requireAdmin, adminController.updateUser);
 
 router.get('/logs', authenticateToken, requireAdmin, adminController.getLogs);
 router.get('/logs/stats', authenticateToken, requireAdmin, adminController.getLogStats);
 
+const reportsController = require('../controllers/reports.controller');
+
 router.get('/settings', authenticateToken, requireAdmin, adminController.getSettings);
 router.put('/settings', authenticateToken, requireAdmin, adminController.updateSettings);
 router.post('/migrate-encryption', authenticateToken, requireAdmin, adminController.migrateEncryption);
+
+router.get('/export/doctors-monthly', authenticateToken, requireAdmin, reportsController.getDoctorsMonthlyReport);
 
 // Backup Routes
 router.get('/backups/settings', authenticateToken, requireAdmin, backupController.getSettings);
