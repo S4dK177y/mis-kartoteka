@@ -17,6 +17,8 @@ import AdminPanel from './pages/AdminPanel';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import { ReportsDropdown } from './components/ui';
+import DoctorsReportView from './pages/reports/DoctorsReportView';
+import PatientsReportView from './pages/reports/PatientsReportView';
 import './index.css';
 
 const Header = () => {
@@ -103,6 +105,9 @@ const AppRoutes = () => {
           <Route path="/persons" element={<ProtectedRoute><PersonList /></ProtectedRoute>} />
           <Route path="/persons/:id" element={<ProtectedRoute><PersonProfile /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute requireAdmin={true}><AdminPanel /></ProtectedRoute>} />
+          
+          <Route path="/reports/doctors" element={<ProtectedRoute requireAdmin={true}><DoctorsReportView /></ProtectedRoute>} />
+          <Route path="/reports/patients" element={<ProtectedRoute requireAdmin={true}><PatientsReportView /></ProtectedRoute>} />
           
           <Route path="/patients/new" element={<ProtectedRoute><PatientForm /></ProtectedRoute>} />
           <Route path="/patients/:id" element={<ProtectedRoute><PatientProfile /></ProtectedRoute>} />

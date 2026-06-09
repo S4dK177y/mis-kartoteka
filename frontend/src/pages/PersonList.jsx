@@ -1,22 +1,38 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, SortAsc, Activity, Stethoscope } from 'lucide-react';
 import { api } from '../api';
+import { useTableFilters } from '../hooks/useTableFilters';
+import TableFilter from '../components/ui/TableFilter';
 
 export default function PersonList() {
   const [persons, setPersons] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  // Filters
+  // Search
   const [search, setSearch] = useState('');
-  const [birthDateFilter, setBirthDateFilter] = useState('');
-  const [serviceFilter, setServiceFilter] = useState('');
-  const [encounterDateFilter, setEncounterDateFilter] = useState('');
   
   // Sorting
   const [sortField, setSortField] = useState('latestEncounterDate'); 
   const [sortOrder, setSortOrder] = useState('desc');
+
+  const columnsConfig = useMemo(() => [
+    { key: 'fullName' },
+    { key: 'birthDate', getValue: p => p.birthDate ? new Date(p.birthDate).toLocaleDateString('ru-RU') : '' },
+    { key: 'service', getValue: p => p.militaryStatus || '' },
+    { key: 'latestEncounterDate', getValue: p => p.latestEncounterDate ? new Date(p.latestEncounterDate).toLocaleDateString('ru-RU') : '' }
+  ], []);
+
+  const {
+    filters,
+    filteredData: hookFilteredData,
+    getUniqueValues,
+    handleFilterToggle,
+    handleSelectAll,
+    handleClearAll,
+    resetAllFilters
+  } = useTableFilters(persons, columnsConfig);
 
   const handleSort = (field) => {
     if (sortField === field) {
@@ -31,6 +47,7 @@ export default function PersonList() {
     if (sortField !== field) return <SortAsc size={12} style={{opacity: 0.3, cursor: 'pointer'}} />;
     return <SortAsc size={12} style={{transform: sortOrder === 'desc' ? 'rotate(180deg)' : 'none', color: 'var(--primary)', cursor: 'pointer', transition: 'transform 0.2s'}} />;
   };
+
   useEffect(() => {
     fetchPersons();
   }, []);
@@ -47,25 +64,9 @@ export default function PersonList() {
   };
 
   const getFilteredPersons = () => {
-    let result = persons.filter(p => {
+    let result = hookFilteredData.filter(p => {
       const searchStr = search.toLowerCase();
       if (searchStr && !p.fullName.toLowerCase().includes(searchStr)) return false;
-
-      if (birthDateFilter) {
-         if (!p.birthDate) return false;
-         const bDate = new Date(p.birthDate).toISOString().split('T')[0];
-         if (bDate !== birthDateFilter) return false;
-      }
-
-      const serviceText = p.militaryStatus || '';
-      if (serviceFilter && !serviceText.toLowerCase().includes(serviceFilter.toLowerCase())) return false;
-
-      if (encounterDateFilter) {
-         if (!p.latestEncounterDate) return false;
-         const eDate = new Date(p.latestEncounterDate).toISOString().split('T')[0];
-         if (eDate !== encounterDateFilter) return false;
-      }
-
       return true;
     });
 
@@ -90,18 +91,11 @@ export default function PersonList() {
 
   const filteredPersons = getFilteredPersons();
 
-  // Determine where to navigate: if they only have consultations, maybe navigate to consultation list with filter?
-  // But wait, "Из карточки человека в этом реестре можно будет увидеть всю историю его госпитализаций и консультаций."
-  // Wait, I need a PersonProfile view, or we can just navigate to PatientProfile, but pass personId to show everything.
-  const uniqueBirthDates = Array.from(new Set(persons.map(p => p.birthDate ? new Date(p.birthDate).toISOString().split('T')[0] : ''))).filter(Boolean).sort();
-  const uniqueServices = Array.from(new Set(persons.map(p => p.militaryStatus || ''))).filter(Boolean).sort();
-  const uniqueEncounterDates = Array.from(new Set(persons.map(p => p.latestEncounterDate ? new Date(p.latestEncounterDate).toISOString().split('T')[0] : ''))).filter(Boolean).sort();
-
   return (
     <div className="animate-fade-in flex-col" style={{ height: '100%' }}>
       <div className="flex justify-between items-end mb-4 gap-4 flex-wrap">
-        <div style={{ flex: 1 }}>
-          <div style={{ position: 'relative' }}>
+        <div style={{ flex: 1, display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          <div style={{ position: 'relative', flex: 1 }}>
             <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
             <input 
               type="text" 
@@ -112,64 +106,55 @@ export default function PersonList() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
+          {Object.keys(filters).length > 0 && (
+            <button 
+              className="btn btn-outline"
+              onClick={resetAllFilters}
+            >
+              Сбросить фильтры ({Object.keys(filters).length})
+            </button>
+          )}
         </div>
       </div>
 
-      <div className="card table-wrapper" style={{ flex: 1 }}>
+      <div className="card table-wrapper" style={{ flex: 1, overflow: 'hidden', padding: 0 }}>
         {loading ? (
           <div className="p-6 text-center text-muted">Загрузка данных...</div>
         ) : filteredPersons.length === 0 ? (
           <div className="p-6 text-center text-muted">Пациенты не найдены</div>
         ) : (
-          <table>
-            <thead>
-              <tr style={{ borderBottom: '2px solid var(--border)', position: 'sticky', top: 0, background: 'white', zIndex: 1 }}>
+          <div className="table-responsive" style={{ height: '100%', overflowY: 'auto' }}>
+            <table className="table" style={{ borderBottom: 'none' }}>
+            <thead style={{ position: 'sticky', top: 0, background: 'var(--bg-card)', zIndex: 10, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+              <tr>
                 <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left' }}>
-                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }} className="flex items-center gap-1 cursor-pointer hover:text-primary" onClick={() => handleSort('fullName')}>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }} className="flex items-center gap-1 cursor-pointer hover:text-primary" onClick={() => handleSort('fullName')}>
                     ФИО <SortIcon field="fullName" />
                   </div>
                 </th>
-                <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', width: '130px' }}>
-                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }}>
-                    Дата рождения
-                  </div>
-                  <select 
-                    value={birthDateFilter}
-                    onChange={e => setBirthDateFilter(e.target.value)}
-                    onClick={e => e.stopPropagation()}
-                    style={{ fontSize: '0.75rem', padding: '0.2rem 0.4rem', border: '1px solid var(--border)', borderRadius: '4px', width: '100%', outline: 'none', background: 'var(--bg-input)' }}
-                  >
-                    <option value="">Все</option>
-                    {uniqueBirthDates.map(d => <option key={d} value={d}>{new Date(d).toLocaleDateString('ru-RU')}</option>)}
-                  </select>
-                </th>
-                <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', width: '110px' }}>
-                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }}>
-                    Служба
-                  </div>
-                  <select 
-                    value={serviceFilter}
-                    onChange={e => setServiceFilter(e.target.value)}
-                    onClick={e => e.stopPropagation()}
-                    style={{ fontSize: '0.75rem', padding: '0.2rem 0.4rem', border: '1px solid var(--border)', borderRadius: '4px', width: '100%', outline: 'none', background: 'var(--bg-input)' }}
-                  >
-                    <option value="">Все</option>
-                    {uniqueServices.map(s => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                </th>
                 <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', width: '150px' }}>
-                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }} className="flex items-center gap-1 cursor-pointer hover:text-primary" onClick={() => handleSort('latestEncounterDate')}>
-                    Последнее обращение <SortIcon field="latestEncounterDate" />
+                  <div className="flex items-center justify-between gap-1">
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Дата рождения
+                    </div>
+                    <TableFilter colKey="birthDate" filters={filters} getUniqueValues={getUniqueValues} onFilterToggle={handleFilterToggle} onSelectAll={handleSelectAll} onClearAll={handleClearAll} />
                   </div>
-                  <select 
-                    value={encounterDateFilter}
-                    onChange={e => setEncounterDateFilter(e.target.value)}
-                    onClick={e => e.stopPropagation()}
-                    style={{ fontSize: '0.75rem', padding: '0.2rem 0.4rem', border: '1px solid var(--border)', borderRadius: '4px', width: '100%', outline: 'none', background: 'var(--bg-input)' }}
-                  >
-                    <option value="">Все</option>
-                    {uniqueEncounterDates.map(d => <option key={d} value={d}>{new Date(d).toLocaleDateString('ru-RU')}</option>)}
-                  </select>
+                </th>
+                <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', width: '130px' }}>
+                  <div className="flex items-center justify-between gap-1">
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Служба
+                    </div>
+                    <TableFilter colKey="service" filters={filters} getUniqueValues={getUniqueValues} onFilterToggle={handleFilterToggle} onSelectAll={handleSelectAll} onClearAll={handleClearAll} />
+                  </div>
+                </th>
+                <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', width: '180px' }}>
+                  <div className="flex items-center justify-between gap-1">
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }} className="flex items-center gap-1 cursor-pointer hover:text-primary" onClick={() => handleSort('latestEncounterDate')}>
+                      Последнее обращение <SortIcon field="latestEncounterDate" />
+                    </div>
+                    <TableFilter colKey="latestEncounterDate" filters={filters} getUniqueValues={getUniqueValues} onFilterToggle={handleFilterToggle} onSelectAll={handleSelectAll} onClearAll={handleClearAll} />
+                  </div>
                 </th>
                 <th style={{ padding: '0.5rem 0.75rem', textAlign: 'center', width: '120px' }}>
                   <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -186,7 +171,7 @@ export default function PersonList() {
             <tbody>
               {filteredPersons.map(person => (
                 <tr key={person.personId} style={{ cursor: 'pointer' }} onClick={() => navigate(`/persons/${person.personId}`)}>
-                  <td style={{ fontWeight: 600, color: 'var(--primary-hover)' }}>
+                  <td style={{ fontWeight: 600, color: 'var(--primary-hover)', borderRight: '1px solid var(--border)' }}>
                     <span>{person.fullName}</span>
                     {(person.rank || person.militaryUnit) && (
                       <div className="text-muted mt-1" style={{ fontSize: '0.7rem', fontWeight: 400 }}>
@@ -196,10 +181,10 @@ export default function PersonList() {
                       </div>
                     )}
                   </td>
-                  <td className="text-muted" style={{ fontSize: '0.85rem' }}>
+                  <td className="text-muted" style={{ fontSize: '0.85rem', borderRight: '1px solid var(--border)' }}>
                     {person.birthDate ? new Date(person.birthDate).toLocaleDateString('ru-RU') : '—'}
                   </td>
-                  <td>
+                  <td style={{ borderRight: '1px solid var(--border)' }}>
                     <div className="flex items-center flex-wrap gap-1">
                       {person.militaryStatus === 'Контракт' && person.isSvoParticipant && (
                         <span className="badge" style={{ background: 'var(--danger-light)', color: 'var(--danger)', fontSize: '0.6rem', padding: '0.1rem 0.3rem' }}>СВО</span>
@@ -212,10 +197,10 @@ export default function PersonList() {
                       )}
                     </div>
                   </td>
-                  <td className="text-muted" style={{ fontSize: '0.75rem' }}>
+                  <td className="text-muted" style={{ fontSize: '0.75rem', borderRight: '1px solid var(--border)' }}>
                     {person.latestEncounterDate ? new Date(person.latestEncounterDate).toLocaleDateString('ru-RU') : '—'}
                   </td>
-                  <td className="text-center">
+                  <td className="text-center" style={{ borderRight: '1px solid var(--border)' }}>
                     {person.hospitalizationsCount > 0 ? (
                       <span className="badge badge-active" style={{ minWidth: '40px' }}>
                         <Activity size={12} className="mr-1" /> {person.hospitalizationsCount}
@@ -237,6 +222,7 @@ export default function PersonList() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
     </div>

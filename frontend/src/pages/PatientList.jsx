@@ -1,26 +1,45 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Download, Filter, SortAsc } from 'lucide-react';
+import { Search, Download, SortAsc } from 'lucide-react';
 import { api } from '../api';
 import { DEPARTMENTS } from './PatientForm';
+import { useTableFilters } from '../hooks/useTableFilters';
+import TableFilter from '../components/ui/TableFilter';
 
 export default function PatientList() {
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  // Filters
+  // Search
   const [search, setSearch] = useState('');
-  const [departmentFilter, setDepartmentFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [ibFilter, setIbFilter] = useState('');
-  const [serviceFilter, setServiceFilter] = useState('');
-  const [diagnosisFilter, setDiagnosisFilter] = useState('');
-  const [dateFilter, setDateFilter] = useState('');
   
   // Sorting
   const [sortField, setSortField] = useState('admissionDate'); 
   const [sortOrder, setSortOrder] = useState('desc');
+
+  const getDisplayDiagnosis = (p) => {
+    return p.finalDiagnosis || p.clinicalDiagnosis || p.admissionDiagnosis || '—';
+  };
+
+  const columnsConfig = useMemo(() => [
+    { key: 'caseHistoryNumber' },
+    { key: 'service', getValue: p => p.isSvoParticipant ? 'СВО' : (p.militaryStatus || '') },
+    { key: 'department' },
+    { key: 'diagnosis', getValue: getDisplayDiagnosis },
+    { key: 'admissionDate', getValue: p => p.admissionDate ? new Date(p.admissionDate).toLocaleDateString('ru-RU') : '' },
+    { key: 'status' }
+  ], []);
+
+  const {
+    filters,
+    filteredData: hookFilteredData,
+    getUniqueValues,
+    handleFilterToggle,
+    handleSelectAll,
+    handleClearAll,
+    resetAllFilters
+  } = useTableFilters(patients, columnsConfig);
 
   const handleSort = (field) => {
     if (sortField === field) {
@@ -51,33 +70,10 @@ export default function PatientList() {
     }
   };
 
-  const getDisplayDiagnosis = (p) => {
-    return p.finalDiagnosis || p.clinicalDiagnosis || p.admissionDiagnosis || '—';
-  };
-
   const getFilteredPatients = () => {
-    let result = patients.filter(p => {
+    let result = hookFilteredData.filter(p => {
       const searchStr = search.toLowerCase();
-      const matchesName = !searchStr || (p.fullName && p.fullName.toLowerCase().includes(searchStr));
-      
-      const matchesIb = !ibFilter || (p.caseHistoryNumber && p.caseHistoryNumber.includes(ibFilter));
-      const matchesDep = !departmentFilter || p.department === departmentFilter;
-
-      const serviceText = p.isSvoParticipant ? 'СВО' : p.militaryStatus;
-      const matchesService = !serviceFilter || (serviceText && serviceText.toLowerCase().includes(serviceFilter.toLowerCase()));
-
-      const diagStr = diagnosisFilter.toLowerCase();
-      const matchesDiag = !diagnosisFilter || getDisplayDiagnosis(p).toLowerCase().includes(diagStr);
-
-      const matchesStatus = !statusFilter || p.status === statusFilter;
-
-      let matchesDate = true;
-      if (dateFilter) {
-        const pDate = new Date(p.admissionDate).toISOString().split('T')[0];
-        matchesDate = pDate === dateFilter;
-      }
-
-      return matchesName && matchesIb && matchesDep && matchesService && matchesDiag && matchesStatus && matchesDate;
+      return !searchStr || (p.fullName && p.fullName.toLowerCase().includes(searchStr));
     });
 
     result.sort((a, b) => {
@@ -101,16 +97,11 @@ export default function PatientList() {
 
   const filteredPatients = getFilteredPatients();
 
-  const uniqueIbs = Array.from(new Set(patients.map(p => p.caseHistoryNumber || ''))).filter(Boolean).sort();
-  const uniqueServices = Array.from(new Set(patients.map(p => p.isSvoParticipant ? 'СВО' : (p.militaryStatus || '')))).filter(Boolean).sort();
-  const uniqueDiagnoses = Array.from(new Set(patients.map(p => getDisplayDiagnosis(p)))).filter(d => d !== '—').sort();
-  const uniqueDates = Array.from(new Set(patients.map(p => p.admissionDate ? new Date(p.admissionDate).toISOString().split('T')[0] : ''))).filter(Boolean).sort();
-
   return (
     <div className="animate-fade-in flex-col" style={{ height: '100%' }}>
       <div className="flex justify-between items-end mb-4 gap-4 flex-wrap">
-        <div style={{ flex: 1 }}>
-          <div style={{ position: 'relative' }}>
+        <div style={{ flex: 1, display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          <div style={{ position: 'relative', flex: 1 }}>
             <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
             <input 
               type="text" 
@@ -121,115 +112,87 @@ export default function PatientList() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
+          {Object.keys(filters).length > 0 && (
+            <button 
+              className="btn btn-outline"
+              onClick={resetAllFilters}
+            >
+              Сбросить фильтры ({Object.keys(filters).length})
+            </button>
+          )}
         </div>
       </div>
 
-      <div className="card table-wrapper" style={{ flex: 1 }}>
+      <div className="card table-wrapper" style={{ flex: 1, overflow: 'hidden', padding: 0 }}>
         {loading ? (
           <div className="p-6 text-center text-muted">Загрузка данных...</div>
         ) : filteredPatients.length === 0 ? (
           <div className="p-6 text-center text-muted">Пациенты не найдены</div>
         ) : (
-          <table>
-            <thead>
-              <tr style={{ borderBottom: '2px solid var(--border)', position: 'sticky', top: 0, background: 'white', zIndex: 1 }}>
+          <div className="table-responsive" style={{ height: '100%', overflowY: 'auto' }}>
+            <table className="table" style={{ borderBottom: 'none' }}>
+            <thead style={{ position: 'sticky', top: 0, background: 'var(--bg-card)', zIndex: 10, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+              <tr>
                 <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', width: '120px' }}>
-                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }} className="flex items-center gap-1 cursor-pointer hover:text-primary" onClick={() => handleSort('caseHistoryNumber')}>
-                    № ИБ <SortIcon field="caseHistoryNumber" />
+                  <div className="flex items-center justify-between gap-1">
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }} className="flex items-center gap-1 cursor-pointer hover:text-primary" onClick={() => handleSort('caseHistoryNumber')}>
+                      № ИБ <SortIcon field="caseHistoryNumber" />
+                    </div>
+                    <TableFilter colKey="caseHistoryNumber" filters={filters} getUniqueValues={getUniqueValues} onFilterToggle={handleFilterToggle} onSelectAll={handleSelectAll} onClearAll={handleClearAll} />
                   </div>
-                  <select 
-                    value={ibFilter}
-                    onChange={e => setIbFilter(e.target.value)}
-                    onClick={e => e.stopPropagation()}
-                    style={{ fontSize: '0.75rem', padding: '0.2rem 0.4rem', border: '1px solid var(--border)', borderRadius: '4px', width: '100%', outline: 'none', background: 'var(--bg-input)' }}
-                  >
-                    <option value="">ВСЕ</option>
-                    {uniqueIbs.map(ib => <option key={ib} value={ib}>{ib}</option>)}
-                  </select>
                 </th>
                 <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left' }}>
-                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }} className="flex items-center gap-1 cursor-pointer hover:text-primary" onClick={() => handleSort('fullName')}>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }} className="flex items-center gap-1 cursor-pointer hover:text-primary" onClick={() => handleSort('fullName')}>
                     ФИО <SortIcon field="fullName" />
                   </div>
                 </th>
-                <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', width: '110px' }}>
-                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }}>
-                    Служба
-                  </div>
-                  <select 
-                    value={serviceFilter}
-                    onChange={e => setServiceFilter(e.target.value)}
-                    onClick={e => e.stopPropagation()}
-                    style={{ fontSize: '0.75rem', padding: '0.2rem 0.4rem', border: '1px solid var(--border)', borderRadius: '4px', width: '100%', outline: 'none', background: 'var(--bg-input)' }}
-                  >
-                    <option value="">ВСЕ</option>
-                    {uniqueServices.map(s => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                </th>
                 <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', width: '130px' }}>
-                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }} className="flex items-center gap-1 cursor-pointer hover:text-primary" onClick={() => handleSort('department')}>
-                    Отделение <SortIcon field="department" />
+                  <div className="flex items-center justify-between gap-1">
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Служба
+                    </div>
+                    <TableFilter colKey="service" filters={filters} getUniqueValues={getUniqueValues} onFilterToggle={handleFilterToggle} onSelectAll={handleSelectAll} onClearAll={handleClearAll} />
                   </div>
-                  <select 
-                    value={departmentFilter} 
-                    onChange={e => setDepartmentFilter(e.target.value)}
-                    onClick={e => e.stopPropagation()}
-                    style={{ fontSize: '0.75rem', padding: '0.2rem 0.4rem', border: '1px solid var(--border)', borderRadius: '4px', width: '100%', outline: 'none', background: 'var(--bg-input)' }}
-                  >
-                    <option value="">ВСЕ</option>
-                    {DEPARTMENTS.map(dep => <option key={dep} value={dep}>{dep.split(' ')[0]}</option>)}
-                  </select>
+                </th>
+                <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', width: '150px' }}>
+                  <div className="flex items-center justify-between gap-1">
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }} className="flex items-center gap-1 cursor-pointer hover:text-primary" onClick={() => handleSort('department')}>
+                      Отделение <SortIcon field="department" />
+                    </div>
+                    <TableFilter colKey="department" filters={filters} getUniqueValues={getUniqueValues} onFilterToggle={handleFilterToggle} onSelectAll={handleSelectAll} onClearAll={handleClearAll} />
+                  </div>
                 </th>
                 <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left' }}>
-                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }}>
-                    Диагноз
+                  <div className="flex items-center justify-between gap-1">
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Диагноз
+                    </div>
+                    <TableFilter colKey="diagnosis" filters={filters} getUniqueValues={getUniqueValues} onFilterToggle={handleFilterToggle} onSelectAll={handleSelectAll} onClearAll={handleClearAll} />
                   </div>
-                  <select 
-                    value={diagnosisFilter}
-                    onChange={e => setDiagnosisFilter(e.target.value)}
-                    onClick={e => e.stopPropagation()}
-                    style={{ fontSize: '0.75rem', padding: '0.2rem 0.4rem', border: '1px solid var(--border)', borderRadius: '4px', width: '100%', outline: 'none', background: 'var(--bg-input)' }}
-                  >
-                    <option value="">ВСЕ</option>
-                    {uniqueDiagnoses.map(d => <option key={d} value={d}>{d}</option>)}
-                  </select>
                 </th>
-                <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', width: '130px' }}>
-                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }} className="flex items-center gap-1 cursor-pointer hover:text-primary" onClick={() => handleSort('admissionDate')}>
-                    Поступление <SortIcon field="admissionDate" />
+                <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', width: '140px' }}>
+                  <div className="flex items-center justify-between gap-1">
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }} className="flex items-center gap-1 cursor-pointer hover:text-primary" onClick={() => handleSort('admissionDate')}>
+                      Поступление <SortIcon field="admissionDate" />
+                    </div>
+                    <TableFilter colKey="admissionDate" filters={filters} getUniqueValues={getUniqueValues} onFilterToggle={handleFilterToggle} onSelectAll={handleSelectAll} onClearAll={handleClearAll} />
                   </div>
-                  <select 
-                    value={dateFilter}
-                    onChange={e => setDateFilter(e.target.value)}
-                    onClick={e => e.stopPropagation()}
-                    style={{ fontSize: '0.75rem', padding: '0.2rem 0.4rem', border: '1px solid var(--border)', borderRadius: '4px', width: '100%', outline: 'none', background: 'var(--bg-input)' }}
-                  >
-                    <option value="">ВСЕ</option>
-                    {uniqueDates.map(d => <option key={d} value={d}>{new Date(d).toLocaleDateString('ru-RU')}</option>)}
-                  </select>
                 </th>
                 <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', width: '120px' }}>
-                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }}>
-                    Статус
+                  <div className="flex items-center justify-between gap-1">
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Статус
+                    </div>
+                    <TableFilter colKey="status" filters={filters} getUniqueValues={getUniqueValues} onFilterToggle={handleFilterToggle} onSelectAll={handleSelectAll} onClearAll={handleClearAll} />
                   </div>
-                  <select 
-                    value={statusFilter} 
-                    onChange={e => setStatusFilter(e.target.value)}
-                    onClick={e => e.stopPropagation()}
-                    style={{ fontSize: '0.75rem', padding: '0.2rem 0.4rem', border: '1px solid var(--border)', borderRadius: '4px', width: '100%', outline: 'none', background: 'var(--bg-input)' }}
-                  >
-                    <option value="">ВСЕ</option>
-                    <option value="На лечении">АКТИВНЫЕ</option>
-                    <option value="Выписан">ВЫПИСАНЫ</option>
-                  </select>
                 </th>
               </tr>
             </thead>
             <tbody>
               {filteredPatients.map(patient => (
-                <tr key={patient.id} onClick={() => navigate(`/patients/${patient.id}`)}>
-                  <td className="text-muted" style={{ fontSize: '0.75rem', fontWeight: 500 }}>{patient.caseHistoryNumber || '—'}</td>
-                  <td style={{ fontWeight: 600, color: 'var(--primary-hover)' }}>
+                <tr key={patient.id} onClick={() => navigate(`/patients/${patient.id}`)} style={{ cursor: 'pointer' }}>
+                  <td className="text-muted" style={{ fontSize: '0.75rem', fontWeight: 500, borderRight: '1px solid var(--border)' }}>{patient.caseHistoryNumber || '—'}</td>
+                  <td style={{ fontWeight: 600, color: 'var(--primary-hover)', borderRight: '1px solid var(--border)' }}>
                     <span>{patient.fullName}</span>
                     {(patient.rank || patient.militaryUnit) && (
                       <div className="text-muted mt-1" style={{ fontSize: '0.7rem', fontWeight: 400 }}>
@@ -239,7 +202,7 @@ export default function PatientList() {
                       </div>
                     )}
                   </td>
-                  <td>
+                  <td style={{ borderRight: '1px solid var(--border)' }}>
                     <div className="flex items-center flex-wrap gap-1">
                       {patient.militaryStatus === 'Контракт' && patient.isSvoParticipant && (
                         <span className="badge" style={{ background: 'var(--danger-light)', color: 'var(--danger)', fontSize: '0.6rem', padding: '0.1rem 0.3rem' }}>СВО</span>
@@ -252,9 +215,9 @@ export default function PatientList() {
                       )}
                     </div>
                   </td>
-                  <td style={{ fontSize: '0.8rem' }}>{patient.department}</td>
-                  <td style={{ fontSize: '0.75rem' }}>{getDisplayDiagnosis(patient)}</td>
-                  <td className="text-muted" style={{ fontSize: '0.75rem' }}>
+                  <td style={{ fontSize: '0.8rem', borderRight: '1px solid var(--border)' }}>{patient.department}</td>
+                  <td style={{ fontSize: '0.75rem', borderRight: '1px solid var(--border)' }}>{getDisplayDiagnosis(patient)}</td>
+                  <td className="text-muted" style={{ fontSize: '0.75rem', borderRight: '1px solid var(--border)' }}>
                     {new Date(patient.admissionDate).toLocaleDateString('ru-RU')}
                     <br/>
                     {new Date(patient.admissionDate).toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit'})}
@@ -268,6 +231,7 @@ export default function PatientList() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
     </div>

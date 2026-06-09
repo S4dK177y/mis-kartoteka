@@ -381,5 +381,18 @@ export const api = {
 
   exportPatientsUrl: `${API_URL}/export/patients`,
   exportDoctorsReportUrl: `${API_URL}/export/doctors-monthly`,
-  getDocumentUrl: (id) => `${API_URL}/documents/${id}`
+  getDocumentUrl: (id) => `${API_URL}/documents/${id}`,
+
+  // --- REPORTS DATA ---
+  getDoctorsMonthlyReportData: async (month, year) => {
+    const res = await fetchWithAuth(`${API_URL}/export/doctors-monthly?month=${month}&year=${year}&format=json`);
+    if (!res.ok) throw new Error('Failed to fetch doctors monthly report data');
+    return res.json();
+  },
+
+  getAllPatientsReportData: async () => {
+    const res = await fetchWithAuth(`${API_URL}/export/patients?format=json`);
+    if (!res.ok) throw new Error('Failed to fetch all patients report data');
+    return res.json();
+  }
 };

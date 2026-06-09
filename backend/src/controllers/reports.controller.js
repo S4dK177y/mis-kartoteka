@@ -8,7 +8,7 @@ const months = [
 
 exports.getDoctorsMonthlyReport = async (req, res) => {
   try {
-    const { month, year } = req.query;
+    const { month, year, format } = req.query;
     if (!month || !year) return res.status(400).json({ error: 'Month and year are required' });
 
     const m = parseInt(month, 10);
@@ -61,6 +61,10 @@ exports.getDoctorsMonthlyReport = async (req, res) => {
       else if (c.type === 'SECONDARY') w.II++;
       else if (c.type === 'PREVENTIVE') w.Z++;
       else if (c.type === 'VVK') w.VVK++;
+    }
+
+    if (format === 'json') {
+      return res.json({ doctorStats });
     }
 
     const workbook = new ExcelJS.Workbook();
