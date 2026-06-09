@@ -102,16 +102,16 @@ const AppRoutes = () => {
           
           <Route path="/" element={<ProtectedRoute>{user?.role === 'DOCTOR' ? <ConsultationList /> : <PatientList />}</ProtectedRoute>} />
           <Route path="/consultations" element={<ProtectedRoute><ConsultationList /></ProtectedRoute>} />
-          <Route path="/persons" element={<ProtectedRoute><PersonList /></ProtectedRoute>} />
-          <Route path="/persons/:id" element={<ProtectedRoute><PersonProfile /></ProtectedRoute>} />
+          <Route path="/persons" element={<ProtectedRoute requireAdmin={true}><PersonList /></ProtectedRoute>} />
+          <Route path="/persons/:id" element={<ProtectedRoute requireAdmin={true}><PersonProfile /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute requireAdmin={true}><AdminPanel /></ProtectedRoute>} />
           
           <Route path="/reports/doctors" element={<ProtectedRoute requireAdmin={true}><DoctorsReportView /></ProtectedRoute>} />
           <Route path="/reports/patients" element={<ProtectedRoute requireAdmin={true}><PatientsReportView /></ProtectedRoute>} />
           
-          <Route path="/patients/new" element={<ProtectedRoute><PatientForm /></ProtectedRoute>} />
-          <Route path="/patients/:id" element={<ProtectedRoute><PatientProfile /></ProtectedRoute>} />
-          <Route path="/patients/:id/edit" element={<ProtectedRoute><PatientForm /></ProtectedRoute>} />
+          <Route path="/patients/new" element={<ProtectedRoute requireAdmin={true}><PatientForm /></ProtectedRoute>} />
+          <Route path="/patients/:id" element={<ProtectedRoute requireAdmin={true}><PatientProfile /></ProtectedRoute>} />
+          <Route path="/patients/:id/edit" element={<ProtectedRoute requireAdmin={true}><PatientForm /></ProtectedRoute>} />
           
           <Route path="/consultations/new" element={<ProtectedRoute><ConsultationForm /></ProtectedRoute>} />
           <Route path="/consultations/:id" element={<ProtectedRoute><ConsultationProfile /></ProtectedRoute>} />

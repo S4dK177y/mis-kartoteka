@@ -1,13 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const patientsController = require('../controllers/patients.controller');
-const { authenticateToken } = require('../middlewares/auth');
+const { authenticateToken, requireAdmin } = require('../middlewares/auth');
 
-router.get('/', authenticateToken, patientsController.getAll);
-router.get('/:id', authenticateToken, patientsController.getById);
-router.post('/', authenticateToken, patientsController.create);
-router.put('/:id', authenticateToken, patientsController.update);
-router.delete('/:id', authenticateToken, patientsController.remove);
-router.post('/:id/transfer', authenticateToken, patientsController.transfer);
+router.use(authenticateToken, requireAdmin);
+
+router.get('/', patientsController.getAll);
+router.get('/:id', patientsController.getById);
+router.post('/', patientsController.create);
+router.put('/:id', patientsController.update);
+router.delete('/:id', patientsController.remove);
+router.post('/:id/transfer', patientsController.transfer);
 
 module.exports = router;
