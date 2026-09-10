@@ -13,6 +13,8 @@ import { useInView } from 'react-intersection-observer';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 import { DEPARTMENTS } from '../constants';
+import toast from 'react-hot-toast';
+import { confirmDialog } from '../utils/confirmDialog';
 import ICD10Autocomplete from '../components/ICD10Autocomplete';
 
 import { PatientSummaryCard } from './patient/PatientSummaryCard';
@@ -55,16 +57,23 @@ export default function PatientProfile() {
   }, [patient]);
 
   const handleDelete = async () => {
-    if (window.confirm('Вы уверены, что хотите удалить эту карту пациента? Это действие необратимо.')) {
+    if (await confirmDialog('Вы уверены, что хотите удалить эту карту пациента? Это действие необратимо.')) {
       const success = await deletePatient();
-      if (success) navigate('/');
+      if (success) {
+        toast.success('Карта удалена');
+        navigate('/');
+      } else {
+        toast.error('Ошибка при удалении карты');
+      }
     }
   };
 
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
     if (file) {
-      await uploadDocument(file);
+      const success = await uploadDocument(file);
+      if (success) toast.success('Документ загружен');
+      else toast.error('Ошибка при загрузке документа');
       if (e.target) e.target.value = null; 
     }
   };
@@ -80,8 +89,10 @@ export default function PatientProfile() {
   };
 
   const handleDeleteDocument = async (docId) => {
-    if (window.confirm('Удалить этот документ?')) {
-      await deleteDocument(docId);
+    if (await confirmDialog('Удалить этот документ?')) {
+      const success = await deleteDocument(docId);
+      if (success) toast.success('Документ удален');
+      else toast.error('Ошибка при удалении документа');
     }
   };
 

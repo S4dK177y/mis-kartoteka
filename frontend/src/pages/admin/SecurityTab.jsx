@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Key, Shield, AlertTriangle, Trash2 } from 'lucide-react';
 import { useAdmin } from '../../hooks/useAdmin';
 import { Card, Button } from '../../components/ui';
+import toast from 'react-hot-toast';
+import { confirmDialog } from '../../utils/confirmDialog';
 
 export const SecurityTab = () => {
   const { changeMasterPassword, factoryReset, cpLoading, isResetting } = useAdmin();
@@ -31,17 +33,17 @@ export const SecurityTab = () => {
 
   const handleFactoryReset = async () => {
     if (resetConfirmWord !== 'СБРОС') {
-      alert('Для подтверждения введите слово СБРОС (заглавными буквами)');
+      toast.error('Для подтверждения введите слово СБРОС (заглавными буквами)');
       return;
     }
-    if (!window.confirm('ВЫ УВЕРЕНЫ? Это удалит ВСЕ данные пациентов, документы, пользователей и логи без возможности восстановления!')) {
+    if (!(await confirmDialog('ВЫ УВЕРЕНЫ? Это удалит ВСЕ данные пациентов, документы, пользователей и логи без возможности восстановления!'))) {
       return;
     }
     const success = await factoryReset();
     if (success) {
       setTimeout(() => window.location.href = '/setup', 500);
     } else {
-      alert('Ошибка при сбросе системы');
+      toast.error('Ошибка при сбросе системы');
     }
   };
 

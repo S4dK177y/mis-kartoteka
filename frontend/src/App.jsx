@@ -124,10 +124,13 @@ const AppRoutes = () => {
   );
 };
 
+import { Toaster } from 'react-hot-toast';
+
 function App() {
   return (
     <AuthProvider>
       <Router>
+        <Toaster position="top-right" />
         <AppRoutes />
       </Router>
     </AuthProvider>
