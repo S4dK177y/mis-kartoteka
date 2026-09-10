@@ -4,6 +4,8 @@ import { ArrowLeft, Edit, Trash2, Calendar, FileText, User } from 'lucide-react'
 import { api } from '../api';
 import { DocumentCard, DocumentViewer } from '../components/ui';
 import { useAuth } from '../context/AuthContext';
+import toast from 'react-hot-toast';
+import { confirmDialog } from '../utils/confirmDialog';
 
 const getTypeLabel = (type) => {
   const map = { PRIMARY: 'Первичный', SECONDARY: 'Повторный', PREVENTIVE: 'Профилактический', VVK: 'ВВК' };
@@ -24,7 +26,7 @@ export default function ConsultationProfile() {
       setConsultation(data);
     } catch (error) {
       console.error(error);
-      alert('Ошибка загрузки приема');
+      toast.error('Ошибка загрузки приема');
     } finally {
       setLoading(false);
     }
@@ -35,12 +37,13 @@ export default function ConsultationProfile() {
   }, [id]);
 
   const handleDelete = async () => {
-    if (window.confirm('Вы уверены, что хотите удалить этот прием?')) {
+    if (await confirmDialog('Вы уверены, что хотите удалить этот прием?')) {
       try {
         await api.deleteConsultation(id);
+        toast.success('Прием удален');
         navigate('/consultations');
       } catch (error) {
-        alert('Ошибка при удалении');
+        toast.error('Ошибка при удалении');
       }
     }
   };

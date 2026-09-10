@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { api } from '../api';
-import { Save, ArrowLeft, Trash2, Upload, Download, FileText, Image, FileArchive, FileAudio, FileVideo, File as FileIcon } from 'lucide-react';
+import { Save, ArrowLeft, Trash2, Upload, Download, FileText, Image, FileArchive, FileAudio, FileVideo, File as FileIcon, Plus, X } from 'lucide-react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { ru } from 'date-fns/locale';
 import { usePhoneMask } from '../hooks/usePhoneMask';
 import { Card, Button, DocumentCard, DocumentUploader } from '../components/ui';
-
+import toast from 'react-hot-toast';
+import { api } from '../api';
 import { useAuth } from '../context/AuthContext';
+import { confirmDialog } from '../utils/confirmDialog';
 import { PatientDataSection } from './consultation/PatientDataSection';
 import { AnamnesisSection } from './consultation/AnamnesisSection';
 import { VVKSection } from './consultation/VVKSection';
@@ -122,7 +123,7 @@ export default function ConsultationForm() {
       }
       if (data.archiveDocuments) setArchiveDocuments(data.archiveDocuments);
     } catch {
-      alert('Ошибка при загрузке данных консультации');
+      toast.error('Ошибка при загрузке данных консультации');
       navigate(-1);
     } finally {
       setLoading(false);
@@ -189,7 +190,7 @@ export default function ConsultationForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!birthDate) return alert("Пожалуйста, введите корректную дату рождения");
+    if (!birthDate) return toast.error("Пожалуйста, введите корректную дату рождения");
 
     try {
       const submissionData = {
@@ -211,26 +212,32 @@ export default function ConsultationForm() {
 
       if (formData.type === 'VVK' && vvkConclusion.status === 'COMPLETED') {
         const reqFields = ['neurologistCategory', 'ophthalmologistCategory', 'dentistCategory', 'surgeonCategory', 'therapistCategory'];
-        if (!reqFields.every(f => vvkConclusion[f])) return alert("Для завершения ВВК необходимо заполнить решения всех 5 врачей.");
-        if (vvkConclusion.isMedicalLeave && !vvkConclusion.medicalLeaveDays) return alert("Укажите количество суток отпуска по болезни.");
-        if (!vvkConclusion.isMedicalLeave && !vvkConclusion.finalCategory) return alert("Укажите итоговую категорию ВВК.");
+        if (!reqFields.every(f => vvkConclusion[f])) return toast.error("Для завершения ВВК необходимо заполнить решения всех 5 врачей.");
+        if (vvkConclusion.isMedicalLeave && !vvkConclusion.medicalLeaveDays) return toast.error("Укажите количество суток отпуска по болезни.");
+        if (!vvkConclusion.isMedicalLeave && !vvkConclusion.finalCategory) return toast.error("Укажите итоговую категорию ВВК.");
       }
 
-      if (isEditing) await api.updateConsultation(id, submissionData);
-      else await api.createConsultation(submissionData);
+      if (isEditing) {
+        await api.updateConsultation(id, submissionData);
+        toast.success('Запись обновлена');
+      } else {
+        await api.createConsultation(submissionData);
+        toast.success('Прием успешно создан');
+      }
       navigate('/consultations');
     } catch (error) {
-      alert('Ошибка при сохранении');
+      toast.error('Ошибка при сохранении');
     }
   };
 
   const handleDelete = async () => {
-    if (window.confirm('Вы уверены, что хотите удалить эту запись о консультации?')) {
+    if (await confirmDialog('Вы уверены, что хотите удалить эту запись о консультации?')) {
       try {
         await api.deleteConsultation(id);
+        toast.success('Запись удалена');
         navigate('/consultations');
       } catch {
-        alert('Ошибка при удалении');
+        toast.error('Ошибка при удалении');
       }
     }
   };
@@ -241,9 +248,10 @@ export default function ConsultationForm() {
     setUploading(true);
     try {
       await api.uploadConsultationDocument(id, file);
+      toast.success('Документ загружен');
       await fetchConsultation();
     } catch {
-      alert('Ошибка при загрузке файла');
+      toast.error('Ошибка при загрузке файла');
     } finally {
       setUploading(false);
       if (e.target) e.target.value = null; 
@@ -256,9 +264,10 @@ export default function ConsultationForm() {
     setUploadingVvk(true);
     try {
       await api.uploadConsultationVvkDocument(id, file);
+      toast.success('Скан ВВК загружен');
       await fetchConsultation();
     } catch (error) {
-      alert(`Ошибка при загрузке скана заключения ВВК: ${error.message}`);
+      toast.error(`Ошибка при загрузке скана заключения ВВК: ${error.message}`);
     } finally {
       setUploadingVvk(false);
       if (e.target) e.target.value = null; 
@@ -275,9 +284,10 @@ export default function ConsultationForm() {
       setUploading(true);
       try {
         await api.uploadConsultationDocument(id, file);
+        toast.success('Документ загружен');
         await fetchConsultation();
       } catch {
-        alert('Ошибка при загрузке файла');
+        toast.error('Ошибка при загрузке файла');
       } finally {
         setUploading(false);
       }
@@ -285,12 +295,13 @@ export default function ConsultationForm() {
   };
 
   const handleDeleteDocument = async (docId) => {
-    if (window.confirm('Удалить этот документ?')) {
+    if (await confirmDialog('Удалить этот документ?')) {
       try {
         await api.deleteDocument(docId);
+        toast.success('Документ удален');
         await fetchConsultation();
       } catch {
-        alert('Ошибка при удалении файла');
+        toast.error('Ошибка при удалении файла');
       }
     }
   };

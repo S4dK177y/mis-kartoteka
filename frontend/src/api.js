@@ -1,3 +1,5 @@
+import toast from 'react-hot-toast';
+
 // api.js - Simple fetch wrapper for API
 // Use relative path so it works from any IP on the network (fallback to localhost for dev)
 const API_URL = import.meta.env.DEV ? 'http://localhost:8080/api' : '/api';
@@ -19,7 +21,7 @@ const fetchWithAuth = async (url, options = {}) => {
   if (res.status === 403) {
     const data = await res.clone().json().catch(() => ({}));
     if (data.error && data.error.includes('демо-аккаунте')) {
-      alert(data.error);
+      toast.error(data.error);
       throw new Error('DEMO_RESTRICTION');
     }
   }

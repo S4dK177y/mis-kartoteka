@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { api } from '../api';
-import { Save, ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Save } from 'lucide-react';
+import toast from 'react-hot-toast';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { ru } from 'date-fns/locale';
@@ -79,7 +80,7 @@ export default function PatientForm() {
       setBirthDate(isNaN(bd.getTime()) ? null : bd);
     } catch (error) {
       console.error(error);
-      alert('Ошибка при загрузке данных пациента');
+      toast.error('Ошибка при загрузке данных пациента');
     } finally {
       setLoading(false);
     }
@@ -136,7 +137,7 @@ export default function PatientForm() {
     e.preventDefault();
     
     if (!birthDate) {
-      alert("Пожалуйста, введите корректную дату рождения");
+      toast.error("Пожалуйста, введите корректную дату рождения");
       return;
     }
 
@@ -149,14 +150,16 @@ export default function PatientForm() {
 
       if (isEditing) {
         await api.updatePatient(id, submissionData);
+        toast.success('Данные пациента обновлены');
         navigate(`/patients/${id}`);
       } else {
         const newPatient = await api.createPatient(submissionData);
+        toast.success('Пациент успешно создан');
         navigate(`/patients/${newPatient.id}`);
       }
     } catch (error) {
       console.error(error);
-      alert('Ошибка при сохранении');
+      toast.error('Ошибка при сохранении');
     }
   };
 

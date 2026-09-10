@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Activity, FileText } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { api } from '../api';
 import { DocumentCard, DocumentViewer } from '../components/ui';
+import { confirmDialog } from '../utils/confirmDialog';
 
 const getTypeLabel = (type) => {
   const map = { PRIMARY: 'Первичный', SECONDARY: 'Повторный', PREVENTIVE: 'Профилактический', VVK: 'ВВК' };
@@ -48,12 +50,13 @@ export default function PersonProfile() {
   };
 
   const handleDeleteDocument = async (docId) => {
-    if (window.confirm('Удалить этот документ?')) {
+    if (await confirmDialog('Удалить этот документ?')) {
       try {
         await api.deleteDocument(docId);
+        toast.success('Документ удален');
         await fetchPerson();
       } catch (error) {
-        alert('Ошибка при удалении файла');
+        toast.error('Ошибка при удалении файла');
       }
     }
   };

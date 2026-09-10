@@ -3,6 +3,8 @@ import { Save, FileUp } from 'lucide-react';
 import { useAdmin } from '../../hooks/useAdmin';
 import { Card, Button } from '../../components/ui';
 import { api } from '../../api';
+import toast from 'react-hot-toast';
+import { confirmDialog } from '../../utils/confirmDialog';
 
 export const BackupsTab = () => {
   const { 
@@ -27,29 +29,31 @@ export const BackupsTab = () => {
 
   const handleCreateBackup = async () => {
     const success = await createBackup();
-    if (!success) alert('Ошибка при создании бэкапа');
+    if (success) toast.success('Бэкап создан');
+    else toast.error('Ошибка при создании бэкапа');
   };
 
   const handleDeleteBackup = async (filename) => {
-    if (!window.confirm(`Удалить бэкап ${filename}?`)) return;
+    if (!(await confirmDialog(`Удалить бэкап ${filename}?`))) return;
     const success = await deleteBackup(filename);
-    if (!success) alert('Ошибка при удалении');
+    if (success) toast.success('Бэкап удален');
+    else toast.error('Ошибка при удалении');
   };
 
   const handleRestoreFromServer = async (filename) => {
-    if (!window.confirm(`ВНИМАНИЕ! Текущие данные будут перезаписаны данными из бэкапа ${filename}. Продолжить?`)) return;
+    if (!(await confirmDialog(`ВНИМАНИЕ! Текущие данные будут перезаписаны данными из бэкапа ${filename}. Продолжить?`))) return;
     const success = await restoreBackupFromServer(filename);
     if (success) {
       window.location.href = '/locked';
     } else {
-      alert('Ошибка при восстановлении');
+      toast.error('Ошибка при восстановлении');
     }
   };
 
   const handleUploadAndRestore = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    if (!window.confirm(`ВНИМАНИЕ! Система будет восстановлена из загруженного архива. Продолжить?`)) {
+    if (!(await confirmDialog(`ВНИМАНИЕ! Система будет восстановлена из загруженного архива. Продолжить?`))) {
       e.target.value = '';
       return;
     }
@@ -57,7 +61,7 @@ export const BackupsTab = () => {
     if (success) {
       window.location.href = '/locked';
     } else {
-      alert('Ошибка загрузки и восстановления');
+      toast.error('Ошибка загрузки и восстановления');
     }
   };
 
