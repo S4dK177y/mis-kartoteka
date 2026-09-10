@@ -93,6 +93,7 @@ data/
 backend/backups/
 backend/data/
 *.bak
+docs/ROADMAP.md
 
 launcher/node_modules/
 launcher/dist/

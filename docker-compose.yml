@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+    container_name: mis_backend
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./backend/data:/app/data
+      - ./backend/backups:/app/backups
+    environment:
+      - NODE_ENV=production
+      - PORT=8080
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: mis_frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
