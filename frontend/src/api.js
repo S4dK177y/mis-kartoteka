@@ -13,7 +13,7 @@ const fetchWithAuth = async (url, options = {}) => {
     if (window.location.pathname !== '/login' && window.location.pathname !== '/setup') {
       window.location.href = '/login';
     }
-    throw new Error('Unauthorized');
+    throw new Error('Неверный логин или пароль');
   }
 
   if (res.status === 423) {
@@ -21,7 +21,7 @@ const fetchWithAuth = async (url, options = {}) => {
     if (window.location.pathname !== '/locked') {
       window.location.href = '/locked';
     }
-    throw new Error('System is locked');
+    throw new Error('Система заблокирована');
   }
 
   return res;
