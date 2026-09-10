@@ -5,8 +5,8 @@ WORKDIR /app
 # Копируем файлы зависимостей
 COPY package*.json ./
 
-# Устанавливаем клиент PostgreSQL для бэкапов
-RUN apk add --no-cache postgresql-client
+# Устанавливаем зависимости ОС: клиент PostgreSQL (для бэкапов) и openssl (для Prisma)
+RUN apk add --no-cache postgresql-client openssl
 
 # Устанавливаем зависимости
 RUN npm ci

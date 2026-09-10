@@ -100,5 +100,4 @@ launcher/dist/
 dist/
 
 # Agent Config
-.agents/*
-!.agents/rules/
+.agents/
