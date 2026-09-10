@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Activity, LogIn } from 'lucide-react';
@@ -8,8 +8,14 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, needsSetup } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (needsSetup) {
+      navigate('/setup', { replace: true });
+    }
+  }, [needsSetup, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
