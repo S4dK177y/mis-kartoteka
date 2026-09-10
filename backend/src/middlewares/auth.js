@@ -8,6 +8,15 @@ const authenticateToken = (req, res, next) => {
 
   jwt.verify(token, JWT_SECRET, (err, user) => {
     if (err) return res.status(403).json({ error: 'Forbidden' });
+
+    if (user.username === 'demo') {
+      if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
+        if (req.originalUrl !== '/api/auth/logout') {
+          return res.status(403).json({ error: 'В демо-аккаунте изменение данных запрещено. Доступен только просмотр.' });
+        }
+      }
+    }
+
     req.user = user;
     next();
   });
