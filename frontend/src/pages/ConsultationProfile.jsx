@@ -18,10 +18,6 @@ export default function ConsultationProfile() {
   const [viewingFile, setViewingFile] = useState(null);
   const { user } = useAuth();
 
-  useEffect(() => {
-    fetchConsultation();
-  }, [id]);
-
   const fetchConsultation = async () => {
     try {
       const data = await api.getConsultation(id);
@@ -33,6 +29,10 @@ export default function ConsultationProfile() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchConsultation();
+  }, [id]);
 
   const handleDelete = async () => {
     if (window.confirm('Вы уверены, что хотите удалить этот прием?')) {

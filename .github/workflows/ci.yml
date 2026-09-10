@@ -17,7 +17,7 @@ jobs:
           node-version: 20
       - name: Install dependencies
         working-directory: ./frontend
-        run: npm ci --legacy-peer-deps
+        run: npm ci
       - name: Run ESLint
         working-directory: ./frontend
         run: npm run lint
@@ -47,7 +47,7 @@ jobs:
           node-version: 20
       - name: Install dependencies
         working-directory: ./frontend
-        run: npm ci --legacy-peer-deps
+        run: npm ci
       - name: Build frontend
         working-directory: ./frontend
         run: npm run build

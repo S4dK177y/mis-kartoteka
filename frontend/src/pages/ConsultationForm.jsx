@@ -68,15 +68,6 @@ export default function ConsultationForm() {
 
   const isOtherRank = ['Пенсионер МО РФ', 'Член семьи военнослужащего', 'Другие'].includes(formData.rank);
 
-  useEffect(() => {
-    if (isEditing) fetchConsultation();
-    if (user?.role === 'ADMIN') {
-      api.getUsers().then(users => {
-        setDoctors(users.filter(u => u.role === 'DOCTOR' || u.role === 'ADMIN'));
-      }).catch(console.error);
-    }
-  }, [id, user]);
-
   const fetchConsultation = async () => {
     if (!id) return;
     try {
@@ -130,13 +121,22 @@ export default function ConsultationForm() {
         if (vvkDoc) setVvkDocument(vvkDoc);
       }
       if (data.archiveDocuments) setArchiveDocuments(data.archiveDocuments);
-    } catch (error) {
+    } catch {
       alert('Ошибка при загрузке данных консультации');
       navigate(-1);
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (isEditing) fetchConsultation();
+    if (user?.role === 'ADMIN') {
+      api.getUsers().then(users => {
+        setDoctors(users.filter(u => u.role === 'DOCTOR' || u.role === 'ADMIN'));
+      }).catch(console.error);
+    }
+  }, [id, user]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;

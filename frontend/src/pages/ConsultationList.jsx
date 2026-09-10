@@ -6,6 +6,11 @@ import { useAuth } from '../context/AuthContext';
 import { useTableFilters } from '../hooks/useTableFilters';
 import TableFilter from '../components/ui/TableFilter';
 
+const SortIcon = ({ field, sortField, sortOrder }) => {
+  if (sortField !== field) return <SortAsc size={12} style={{opacity: 0.3, cursor: 'pointer'}} />;
+  return <SortAsc size={12} style={{transform: sortOrder === 'desc' ? 'rotate(180deg)' : 'none', color: 'var(--primary)', cursor: 'pointer', transition: 'transform 0.2s'}} />;
+};
+
 const getTypeLabel = (type) => {
   const map = { PRIMARY: 'Первичный', SECONDARY: 'Повторный', PREVENTIVE: 'Профилактический', VVK: 'ВВК' };
   return map[type] || type;
@@ -53,15 +58,6 @@ export default function ConsultationList() {
     }
   };
 
-  const SortIcon = ({ field }) => {
-    if (sortField !== field) return <SortAsc size={12} style={{opacity: 0.3, cursor: 'pointer'}} />;
-    return <SortAsc size={12} style={{transform: sortOrder === 'desc' ? 'rotate(180deg)' : 'none', color: 'var(--primary)', cursor: 'pointer', transition: 'transform 0.2s'}} />;
-  };
-
-  useEffect(() => {
-    fetchConsultations();
-  }, []);
-
   const fetchConsultations = async () => {
     try {
       const data = await api.getConsultations();
@@ -72,6 +68,10 @@ export default function ConsultationList() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchConsultations();
+  }, []);
 
   const getFilteredConsultations = () => {
     let result = hookFilteredData.filter(c => {
@@ -140,7 +140,7 @@ export default function ConsultationList() {
                 <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left' }}>
                   <div className="flex items-center justify-between gap-1">
                     <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }} className="flex items-center gap-1 cursor-pointer hover:text-primary" onClick={() => handleSort('fullName')}>
-                      ФИО <SortIcon field="fullName" />
+                      ФИО <SortIcon field="fullName" sortField={sortField} sortOrder={sortOrder} />
                     </div>
                   </div>
                 </th>
@@ -181,7 +181,7 @@ export default function ConsultationList() {
                 <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', width: '150px' }}>
                   <div className="flex items-center justify-between gap-1">
                     <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }} className="flex items-center gap-1 cursor-pointer hover:text-primary" onClick={() => handleSort('consultationDate')}>
-                      Дата приема <SortIcon field="consultationDate" />
+                      Дата приема <SortIcon field="consultationDate" sortField={sortField} sortOrder={sortOrder} />
                     </div>
                     <TableFilter colKey="consultationDate" filters={filters} getUniqueValues={getUniqueValues} onFilterToggle={handleFilterToggle} onSelectAll={handleSelectAll} onClearAll={handleClearAll} />
                   </div>
@@ -189,7 +189,7 @@ export default function ConsultationList() {
                 <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', width: '150px' }}>
                   <div className="flex items-center justify-between gap-1">
                     <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }} className="flex items-center gap-1 cursor-pointer hover:text-primary" onClick={() => handleSort('nextConsultationDate')}>
-                      Следующий визит <SortIcon field="nextConsultationDate" />
+                      Следующий визит <SortIcon field="nextConsultationDate" sortField={sortField} sortOrder={sortOrder} />
                     </div>
                     <TableFilter colKey="nextConsultationDate" filters={filters} getUniqueValues={getUniqueValues} onFilterToggle={handleFilterToggle} onSelectAll={handleSelectAll} onClearAll={handleClearAll} />
                   </div>

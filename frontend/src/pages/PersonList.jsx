@@ -5,6 +5,11 @@ import { api } from '../api';
 import { useTableFilters } from '../hooks/useTableFilters';
 import TableFilter from '../components/ui/TableFilter';
 
+const SortIcon = ({ field, sortField, sortOrder }) => {
+  if (sortField !== field) return <SortAsc size={12} style={{opacity: 0.3, cursor: 'pointer'}} />;
+  return <SortAsc size={12} style={{transform: sortOrder === 'desc' ? 'rotate(180deg)' : 'none', color: 'var(--primary)', cursor: 'pointer', transition: 'transform 0.2s'}} />;
+};
+
 export default function PersonList() {
   const [persons, setPersons] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -43,15 +48,6 @@ export default function PersonList() {
     }
   };
 
-  const SortIcon = ({ field }) => {
-    if (sortField !== field) return <SortAsc size={12} style={{opacity: 0.3, cursor: 'pointer'}} />;
-    return <SortAsc size={12} style={{transform: sortOrder === 'desc' ? 'rotate(180deg)' : 'none', color: 'var(--primary)', cursor: 'pointer', transition: 'transform 0.2s'}} />;
-  };
-
-  useEffect(() => {
-    fetchPersons();
-  }, []);
-
   const fetchPersons = async () => {
     try {
       const data = await api.getPersons();
@@ -62,6 +58,10 @@ export default function PersonList() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchPersons();
+  }, []);
 
   const getFilteredPersons = () => {
     let result = hookFilteredData.filter(p => {
@@ -129,7 +129,7 @@ export default function PersonList() {
               <tr>
                 <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left' }}>
                   <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }} className="flex items-center gap-1 cursor-pointer hover:text-primary" onClick={() => handleSort('fullName')}>
-                    ФИО <SortIcon field="fullName" />
+                    ФИО <SortIcon field="fullName" sortField={sortField} sortOrder={sortOrder} />
                   </div>
                 </th>
                 <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', width: '150px' }}>
@@ -151,7 +151,7 @@ export default function PersonList() {
                 <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', width: '180px' }}>
                   <div className="flex items-center justify-between gap-1">
                     <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }} className="flex items-center gap-1 cursor-pointer hover:text-primary" onClick={() => handleSort('latestEncounterDate')}>
-                      Последнее обращение <SortIcon field="latestEncounterDate" />
+                      Последнее обращение <SortIcon field="latestEncounterDate" sortField={sortField} sortOrder={sortOrder} />
                     </div>
                     <TableFilter colKey="latestEncounterDate" filters={filters} getUniqueValues={getUniqueValues} onFilterToggle={handleFilterToggle} onSelectAll={handleSelectAll} onClearAll={handleClearAll} />
                   </div>

@@ -9,17 +9,7 @@ import ICD10Autocomplete from '../components/ICD10Autocomplete';
 import { MILITARY_RANKS_GROUPS } from '../ranks';
 import { usePhoneMask } from '../hooks/usePhoneMask';
 
-export const DEPARTMENTS = [
-  'Неврологическое отделение (НО)',
-  'Хирургическое отделение (ХО)',
-  'Оториноларингологическое отделение (ЛОР)',
-  'Терапевтическое №1 (ТО1)',
-  'Терапевтическое №2 (ТО2)',
-  'Инфекционное №1 (ИО1)',
-  'Инфекционное №2 (ИО2)',
-  'Отделение анестезиологии и реанимации (ОАиР)',
-  'Госпитальное отделение (ГО)'
-];
+import { DEPARTMENTS } from '../constants';
 
 export default function PatientForm() {
   const { id } = useParams();
@@ -59,12 +49,6 @@ export default function PatientForm() {
 
   const isOtherRank = ['Пенсионер МО РФ', 'Член семьи военнослужащего', 'Другие'].includes(formData.rank);
 
-  useEffect(() => {
-    if (isEditing) {
-      fetchPatient();
-    }
-  }, [id]);
-
   const fetchPatient = async () => {
     try {
       const data = await api.getPatient(id);
@@ -100,6 +84,13 @@ export default function PatientForm() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (isEditing) {
+      fetchPatient();
+    }
+  }, [id]);
+
 
   const handleChange = (e) => {
     const target = e.target;

@@ -12,7 +12,7 @@ import { Document, Page, pdfjs } from 'react-pdf';
 import { useInView } from 'react-intersection-observer';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
-import { DEPARTMENTS } from './PatientForm';
+import { DEPARTMENTS } from '../constants';
 import ICD10Autocomplete from '../components/ICD10Autocomplete';
 
 import { PatientSummaryCard } from './patient/PatientSummaryCard';

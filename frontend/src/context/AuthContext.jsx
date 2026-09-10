@@ -3,6 +3,7 @@ import { api } from '../api';
 
 const AuthContext = createContext();
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
@@ -10,10 +11,6 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [needsSetup, setNeedsSetup] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
-
-  useEffect(() => {
-    checkAuth();
-  }, []);
 
   const checkAuth = async () => {
     try {
@@ -32,12 +29,16 @@ export const AuthProvider = ({ children }) => {
 
       const currentUser = await api.getCurrentUser();
       setUser(currentUser);
-    } catch (error) {
+    } catch {
       setUser(null);
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    checkAuth();
+  }, []);
 
   const login = async (username, password) => {
     const data = await api.login(username, password);
@@ -79,14 +80,10 @@ export const AuthProvider = ({ children }) => {
   };
 
   const unlock = async (password) => {
-    try {
-      const res = await api.unlockSystem(password);
-      if (res.isUnlocked) {
-        setIsLocked(false);
-        await checkAuth();
-      }
-    } catch (err) {
-      throw err;
+    const res = await api.unlockSystem(password);
+    if (res.isUnlocked) {
+      setIsLocked(false);
+      await checkAuth();
     }
   };
 

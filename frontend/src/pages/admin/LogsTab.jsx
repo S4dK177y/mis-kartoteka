@@ -30,79 +30,82 @@ const LogDetails = ({ detailsStr, action, entity }) => {
     return <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Подробная информация не записана.</span>;
   }
 
+  let d;
   try {
-    const d = JSON.parse(detailsStr);
+    d = JSON.parse(detailsStr);
+  } catch {
+    return <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{detailsStr}</span>;
+  }
 
-    if (d.changes && typeof d.changes === 'object' && Object.keys(d.changes).length > 0) {
-      return (
-        <div className="flex-col gap-2">
-          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>Изменённые поля</span>
-          {Object.entries(d.changes).map(([field, vals]) => (
-            <div key={field} style={{ display: 'grid', gridTemplateColumns: '170px 1fr 20px 1fr', gap: '0.4rem', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600 }}>{FIELD_LABELS[field] || field}</span>
-              <span style={{ background: '#fee2e2', color: '#991b1b', padding: '0.2rem 0.5rem', borderRadius: '5px', fontSize: '0.79rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {formatFieldValue(field, vals?.old)}
-              </span>
-              <span style={{ color: 'var(--text-muted)', textAlign: 'center', fontSize: '0.85rem' }}>→</span>
-              <span style={{ background: '#dcfce7', color: '#166534', padding: '0.2rem 0.5rem', borderRadius: '5px', fontSize: '0.79rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {formatFieldValue(field, vals?.new)}
-              </span>
-            </div>
-          ))}
-        </div>
-      );
-    }
-
-    const countEntries = Object.entries(d).filter(([k]) => k in COUNT_KEYS);
-    if (countEntries.length > 0) {
-      return (
-        <div className="flex-col gap-1">
-          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>Результаты миграции</span>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-            {countEntries.map(([k, v]) => (
-              <span key={k} style={{ background: '#dbeafe', color: '#1e3a8a', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '0.2rem 0.6rem', fontSize: '0.8rem', fontWeight: 600 }}>
-                {COUNT_KEYS[k]}: {v}
-              </span>
-            ))}
-          </div>
-        </div>
-      );
-    }
-
-    if (d.originalName) {
-      const isUpload = action === 'UPLOAD';
-      return (
-        <div className="flex-col gap-1">
-          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            {isUpload ? 'Загруженный файл' : 'Удалённый файл'}
-          </span>
-          <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)', background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: '6px', padding: '0.3rem 0.6rem', display: 'inline-block' }}>
-            {d.originalName}
-          </span>
-        </div>
-      );
-    }
-
-    const visible = Object.entries(d).filter(([k, v]) =>
-      !HIDDEN_KEYS.has(k)
-      && k !== 'note'
-      && !(typeof v === 'string' && UUID_RE.test(v))
-      && v !== null && v !== undefined
-    );
-    if (visible.length === 0) return <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Подробная информация не записана.</span>;
+  if (d.changes && typeof d.changes === 'object' && Object.keys(d.changes).length > 0) {
     return (
-      <div className="flex-col gap-1">
-        {visible.map(([k, v]) => (
-          <div key={k} className="flex items-center gap-2">
-            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600, minWidth: '120px' }}>{FIELD_LABELS[k] || k}</span>
-            <span style={{ fontSize: '0.83rem', fontWeight: 500, color: 'var(--text-main)' }}>{formatFieldValue(k, v)}</span>
+      <div className="flex-col gap-2">
+        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>Изменённые поля</span>
+        {Object.entries(d.changes).map(([field, vals]) => (
+          <div key={field} style={{ display: 'grid', gridTemplateColumns: '170px 1fr 20px 1fr', gap: '0.4rem', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600 }}>{FIELD_LABELS[field] || field}</span>
+            <span style={{ background: '#fee2e2', color: '#991b1b', padding: '0.2rem 0.5rem', borderRadius: '5px', fontSize: '0.79rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {formatFieldValue(field, vals?.old)}
+            </span>
+            <span style={{ color: 'var(--text-muted)', textAlign: 'center', fontSize: '0.85rem' }}>→</span>
+            <span style={{ background: '#dcfce7', color: '#166534', padding: '0.2rem 0.5rem', borderRadius: '5px', fontSize: '0.79rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {formatFieldValue(field, vals?.new)}
+            </span>
           </div>
         ))}
       </div>
     );
-  } catch {
-    return <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{detailsStr}</span>;
   }
+
+  const countEntries = Object.entries(d).filter(([k]) => k in COUNT_KEYS);
+  if (countEntries.length > 0) {
+    return (
+      <div className="flex-col gap-1">
+        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>Результаты миграции</span>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+          {countEntries.map(([k, v]) => (
+            <span key={k} style={{ background: '#dbeafe', color: '#1e3a8a', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '0.2rem 0.6rem', fontSize: '0.8rem', fontWeight: 600 }}>
+              {COUNT_KEYS[k]}: {v}
+            </span>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (d.originalName) {
+    const isUpload = action === 'UPLOAD';
+    return (
+      <div className="flex-col gap-1">
+        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          {isUpload ? 'Загруженный файл' : 'Удалённый файл'}
+        </span>
+        <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)', background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: '6px', padding: '0.3rem 0.6rem', display: 'inline-block' }}>
+          {d.originalName}
+        </span>
+      </div>
+    );
+  }
+
+  const visible = Object.entries(d).filter(([k, v]) =>
+    !HIDDEN_KEYS.has(k)
+    && k !== 'note'
+    && !(typeof v === 'string' && UUID_RE.test(v))
+    && v !== null && v !== undefined
+  );
+  
+  if (visible.length === 0) return <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Подробная информация не записана.</span>;
+  
+  return (
+    <div className="flex-col gap-1">
+      {visible.map(([k, v]) => (
+        <div key={k} className="flex items-center gap-2">
+          <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600, minWidth: '120px' }}>{FIELD_LABELS[k] || k}</span>
+          <span style={{ fontSize: '0.83rem', fontWeight: 500, color: 'var(--text-main)' }}>{formatFieldValue(k, v)}</span>
+        </div>
+      ))}
+    </div>
+  );
 };
 
 const LogRow = ({ log }) => {

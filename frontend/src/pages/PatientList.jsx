@@ -2,9 +2,14 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Download, SortAsc } from 'lucide-react';
 import { api } from '../api';
-import { DEPARTMENTS } from './PatientForm';
+import { DEPARTMENTS } from '../constants';
 import { useTableFilters } from '../hooks/useTableFilters';
 import TableFilter from '../components/ui/TableFilter';
+
+const SortIcon = ({ field, sortField, sortOrder }) => {
+  if (sortField !== field) return <SortAsc size={12} style={{opacity: 0.3, cursor: 'pointer'}} />;
+  return <SortAsc size={12} style={{transform: sortOrder === 'desc' ? 'rotate(180deg)' : 'none', color: 'var(--primary)', cursor: 'pointer', transition: 'transform 0.2s'}} />;
+};
 
 export default function PatientList() {
   const [patients, setPatients] = useState([]);
@@ -50,15 +55,6 @@ export default function PatientList() {
     }
   };
 
-  const SortIcon = ({ field }) => {
-    if (sortField !== field) return <SortAsc size={12} style={{opacity: 0.3, cursor: 'pointer'}} />;
-    return <SortAsc size={12} style={{transform: sortOrder === 'desc' ? 'rotate(180deg)' : 'none', color: 'var(--primary)', cursor: 'pointer', transition: 'transform 0.2s'}} />;
-  };
-
-  useEffect(() => {
-    fetchPatients();
-  }, []);
-
   const fetchPatients = async () => {
     try {
       const data = await api.getPatients();
@@ -69,6 +65,10 @@ export default function PatientList() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchPatients();
+  }, []);
 
   const getFilteredPatients = () => {
     let result = hookFilteredData.filter(p => {
@@ -136,14 +136,14 @@ export default function PatientList() {
                 <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', width: '120px' }}>
                   <div className="flex items-center justify-between gap-1">
                     <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }} className="flex items-center gap-1 cursor-pointer hover:text-primary" onClick={() => handleSort('caseHistoryNumber')}>
-                      № ИБ <SortIcon field="caseHistoryNumber" />
+                      № ИБ <SortIcon field="caseHistoryNumber" sortField={sortField} sortOrder={sortOrder} />
                     </div>
                     <TableFilter colKey="caseHistoryNumber" filters={filters} getUniqueValues={getUniqueValues} onFilterToggle={handleFilterToggle} onSelectAll={handleSelectAll} onClearAll={handleClearAll} />
                   </div>
                 </th>
                 <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left' }}>
                   <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }} className="flex items-center gap-1 cursor-pointer hover:text-primary" onClick={() => handleSort('fullName')}>
-                    ФИО <SortIcon field="fullName" />
+                    ФИО <SortIcon field="fullName" sortField={sortField} sortOrder={sortOrder} />
                   </div>
                 </th>
                 <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', width: '130px' }}>
@@ -157,7 +157,7 @@ export default function PatientList() {
                 <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', width: '150px' }}>
                   <div className="flex items-center justify-between gap-1">
                     <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }} className="flex items-center gap-1 cursor-pointer hover:text-primary" onClick={() => handleSort('department')}>
-                      Отделение <SortIcon field="department" />
+                      Отделение <SortIcon field="department" sortField={sortField} sortOrder={sortOrder} />
                     </div>
                     <TableFilter colKey="department" filters={filters} getUniqueValues={getUniqueValues} onFilterToggle={handleFilterToggle} onSelectAll={handleSelectAll} onClearAll={handleClearAll} />
                   </div>
@@ -173,7 +173,7 @@ export default function PatientList() {
                 <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', width: '140px' }}>
                   <div className="flex items-center justify-between gap-1">
                     <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }} className="flex items-center gap-1 cursor-pointer hover:text-primary" onClick={() => handleSort('admissionDate')}>
-                      Поступление <SortIcon field="admissionDate" />
+                      Поступление <SortIcon field="admissionDate" sortField={sortField} sortOrder={sortOrder} />
                     </div>
                     <TableFilter colKey="admissionDate" filters={filters} getUniqueValues={getUniqueValues} onFilterToggle={handleFilterToggle} onSelectAll={handleSelectAll} onClearAll={handleClearAll} />
                   </div>

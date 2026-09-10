@@ -13,10 +13,6 @@ export default function LockScreen() {
   const [status, setStatus] = useState(null);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    checkStatus();
-  }, []);
-
   const checkStatus = async () => {
     try {
       const data = await api.checkSystemStatus();
@@ -28,6 +24,10 @@ export default function LockScreen() {
       console.error(err);
     }
   };
+
+  useEffect(() => {
+    checkStatus();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

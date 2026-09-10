@@ -10,12 +10,7 @@ export function useTableFilters(data, columnsConfig = []) {
         if (!selectedSet || selectedSet.size === 0) return true;
         
         const colDef = columnsConfig.find(c => c.key === key);
-        let val = '';
-        if (colDef && colDef.getValue) {
-          val = colDef.getValue(row);
-        } else {
-          val = row[key];
-        }
+        const val = colDef && colDef.getValue ? colDef.getValue(row) : row[key];
         
         return selectedSet.has(String(val || ''));
       });
@@ -26,12 +21,7 @@ export function useTableFilters(data, columnsConfig = []) {
     if (!data) return [];
     const colDef = columnsConfig.find(c => c.key === colKey);
     const vals = new Set(data.map(row => {
-      let val = '';
-      if (colDef && colDef.getValue) {
-        val = colDef.getValue(row);
-      } else {
-        val = row[colKey];
-      }
+      const val = colDef && colDef.getValue ? colDef.getValue(row) : row[colKey];
       return String(val || '');
     }));
     return Array.from(vals).sort();
