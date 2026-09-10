@@ -16,6 +16,14 @@ const fetchWithAuth = async (url, options = {}) => {
     throw new Error('Неверный логин или пароль');
   }
 
+  if (res.status === 403) {
+    const data = await res.clone().json().catch(() => ({}));
+    if (data.error && data.error.includes('демо-аккаунте')) {
+      alert(data.error);
+      throw new Error('DEMO_RESTRICTION');
+    }
+  }
+
   if (res.status === 423) {
     // Locked - Master password required
     if (window.location.pathname !== '/locked') {
