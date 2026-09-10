@@ -1,26 +1,45 @@
 version: '3.8'
 
 services:
+  db:
+    image: postgres:15-alpine
+    container_name: mis_db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+
   backend:
     build:
       context: ./backend
     container_name: mis_backend
     ports:
-      - "8080:8080"
+      - "${PORT}:${PORT}"
     volumes:
       - ./backend/data:/app/data
       - ./backend/backups:/app/backups
     environment:
       - NODE_ENV=production
-      - PORT=8080
+      - PORT=${PORT}
+      - DATABASE_URL=${DATABASE_URL}
     restart: unless-stopped
+    depends_on:
+      - db
 
   frontend:
     build:
       context: ./frontend
     container_name: mis_frontend
     ports:
-      - "3000:80"
+      - "80:80"
     depends_on:
       - backend
     restart: unless-stopped
+
+volumes:
+  pgdata:

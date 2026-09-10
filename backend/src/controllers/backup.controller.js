@@ -5,6 +5,7 @@ const prisma = require('../utils/prisma');
 const cryptoUtil = require('../utils/crypto');
 const { logAction } = require('../utils/logger');
 const cron = require('node-cron');
+const { execSync } = require('child_process');
 
 const dataDir = path.join(__dirname, '../../data');
 const backupsDir = path.join(__dirname, '../../backups');
@@ -20,20 +21,30 @@ let scheduledJob = null;
 // --- Helper Functions ---
 
 const createBackupFile = async (reqUserId = 'SYSTEM') => {
-  // Ensure DB is flushed to disk
-  await prisma.$queryRaw`PRAGMA wal_checkpoint(TRUNCATE)`;
-  
   const zip = new AdmZip();
+  const dbUrl = process.env.DATABASE_URL;
+  const dumpPath = path.join(dataDir, 'database.sql');
   
-  // Add database
-  const dbPath = path.join(dataDir, 'database.sqlite');
-  if (fs.existsSync(dbPath)) zip.addLocalFile(dbPath);
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
+  }
+
+  // 1. Dump PostgreSQL database
+  try {
+    execSync(`pg_dump "${dbUrl}" --clean --if-exists --no-owner --no-privileges -f "${dumpPath}"`, { stdio: 'ignore' });
+    if (fs.existsSync(dumpPath)) {
+      zip.addLocalFile(dumpPath);
+    }
+  } catch (err) {
+    console.error('Failed to dump database:', err);
+    throw new Error('Database dump failed');
+  }
   
-  // Add encryption config
+  // 2. Add encryption config
   const encPath = path.join(dataDir, 'encryption.json');
   if (fs.existsSync(encPath)) zip.addLocalFile(encPath);
   
-  // Add storage directory
+  // 3. Add storage directory
   const storageDir = path.join(dataDir, 'storage');
   if (fs.existsSync(storageDir)) zip.addLocalFolder(storageDir, 'storage');
 
@@ -42,6 +53,9 @@ const createBackupFile = async (reqUserId = 'SYSTEM') => {
   const backupPath = path.join(backupsDir, filename);
   
   zip.writeZip(backupPath);
+  
+  // Cleanup temp dump
+  if (fs.existsSync(dumpPath)) fs.unlinkSync(dumpPath);
   
   if (reqUserId !== 'SYSTEM') {
     await logAction(reqUserId, 'CREATE', 'Backup', filename);
@@ -197,62 +211,63 @@ const performRestore = async (zipPath) => {
   // Validate zip
   const zip = new AdmZip(zipPath);
   const zipEntries = zip.getEntries();
-  const hasDb = zipEntries.some(e => e.entryName === 'database.sqlite');
+  const hasDb = zipEntries.some(e => e.entryName === 'database.sql');
   const hasEnc = zipEntries.some(e => e.entryName === 'encryption.json');
   
   if (!hasDb || !hasEnc) {
-    throw new Error('Invalid backup archive. Missing database or encryption config.');
+    throw new Error('Invalid backup archive. Missing database.sql or encryption config.');
   }
 
-  // Disconnect prisma and wait for file locks to be fully released by OS
+  // Disconnect prisma
   await prisma.$disconnect();
   await delay(1000);
 
-  // Fail-safe: instead of renaming the whole data folder (which throws EPERM on Windows if watched),
-  // we move its contents to data.bak
-  const bakDir = path.join(__dirname, '../../data.bak');
-  if (fs.existsSync(bakDir)) fs.rmSync(bakDir, { recursive: true, force: true });
-  fs.mkdirSync(bakDir, { recursive: true });
+  const extractDir = path.join(__dirname, '../../data.restore');
+  if (fs.existsSync(extractDir)) fs.rmSync(extractDir, { recursive: true, force: true });
+  fs.mkdirSync(extractDir, { recursive: true });
 
-  const itemsMoved = [];
   try {
-    if (fs.existsSync(dataDir)) {
-      const items = fs.readdirSync(dataDir);
-      for (const item of items) {
-        const oldPath = path.join(dataDir, item);
-        const newPath = path.join(bakDir, item);
-        fs.renameSync(oldPath, newPath);
-        itemsMoved.push({ oldPath, newPath });
-      }
-    }
-
-    // Ensure data dir exists and extract
-    if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
-    zip.extractAllTo(dataDir, true);
+    // 1. Extract zip to a temporary folder
+    zip.extractAllTo(extractDir, true);
     
-    // Cleanup bak
-    if (fs.existsSync(bakDir)) fs.rmSync(bakDir, { recursive: true, force: true });
+    // 2. Restore PostgreSQL database
+    const dbUrl = process.env.DATABASE_URL;
+    const dumpPath = path.join(extractDir, 'database.sql');
+    
+    try {
+      execSync(`psql "${dbUrl}" -f "${dumpPath}"`, { stdio: 'ignore' });
+    } catch (dbErr) {
+       console.error('DB Restore Error:', dbErr.message);
+       throw new Error('Failed to restore database from sql dump.');
+    }
+    
+    // 3. Restore files (storage and encryption.json)
+    if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+    
+    const encExtracted = path.join(extractDir, 'encryption.json');
+    if (fs.existsSync(encExtracted)) {
+      fs.copyFileSync(encExtracted, path.join(dataDir, 'encryption.json'));
+    }
+    
+    const storageExtracted = path.join(extractDir, 'storage');
+    const storageDest = path.join(dataDir, 'storage');
+    if (fs.existsSync(storageExtracted)) {
+       if (fs.existsSync(storageDest)) fs.rmSync(storageDest, { recursive: true, force: true });
+       // fs.renameSync can sometimes fail across devices, so we copy then delete
+       // Since it's within same container, renameSync should work
+       fs.renameSync(storageExtracted, storageDest);
+    }
+    
+    // Cleanup extract dir
+    if (fs.existsSync(extractDir)) fs.rmSync(extractDir, { recursive: true, force: true });
     
     // Lock crypto so user must re-enter master password for the restored state
     cryptoUtil.lock();
     
     return true;
   } catch (err) {
-    // Rollback
-    if (fs.existsSync(dataDir)) {
-      const currentItems = fs.readdirSync(dataDir);
-      for (const item of currentItems) {
-        fs.rmSync(path.join(dataDir, item), { recursive: true, force: true });
-      }
-    }
-    
-    for (const move of itemsMoved) {
-      if (fs.existsSync(move.newPath)) {
-        fs.renameSync(move.newPath, move.oldPath);
-      }
-    }
-    
-    throw new Error('Restore failed, rolled back to previous state. Details: ' + err.message);
+    if (fs.existsSync(extractDir)) fs.rmSync(extractDir, { recursive: true, force: true });
+    throw new Error('Restore failed. Details: ' + err.message);
   }
 };
 
