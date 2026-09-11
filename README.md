@@ -2,7 +2,7 @@
   <h1>🏥 МИС Картотека</h1>
 
   <p>
-    <a href="https://github.com/S4dK177y/mis-kartoteka/releases"><img src="https://img.shields.io/github/v/release/S4dK177y/mis-kartoteka?color=blue&label=version" alt="GitHub Release"></a>
+    <a href="https://github.com/S4dK177y/mis-kartoteka/releases"><img src="https://img.shields.io/github/v/tag/S4dK177y/mis-kartoteka?color=blue&label=version" alt="GitHub Tag"></a>
     <img src="https://img.shields.io/badge/Status-In_Development-orange" alt="Status">
     <a href="https://github.com/S4dK177y/mis-kartoteka/actions/workflows/ci.yml"><img src="https://github.com/S4dK177y/mis-kartoteka/actions/workflows/ci.yml/badge.svg" alt="CI Pipeline"></a>
     <a href="https://github.com/S4dK177y/mis-kartoteka/actions/workflows/docker.yml"><img src="https://github.com/S4dK177y/mis-kartoteka/actions/workflows/docker.yml/badge.svg" alt="Docker Build"></a>
@@ -50,8 +50,8 @@
 
 ## 🌍 Живая демонстрация (Live Demo)
 
-Для оценки интерфейса и функциональности системы без необходимости разворачивать сервер, проект доступен по адресу:
-**[Вставьте ссылку на ваш сайт здесь]**
+Для оценки интерфейса и функциональности системы без необходимости разворачивать сервер, планируется запуск публичного демо-стенда:
+**[Ссылка появится здесь позже, хостинг в процессе настройки]**
 
 > **Данные для входа в демо-режим:**
 > Логин: `demo` | Пароль: `password`
@@ -59,21 +59,38 @@
 
 ## 🐳 Самостоятельное развертывание
 
-Запуск собственного инстанса проекта осуществляется через Docker Compose:
+Запуск собственного инстанса проекта осуществляется через Docker Compose. Следуйте этим пошаговым инструкциям:
 
-1. Клонируйте репозиторий:
-   ```bash
-   git clone https://github.com/S4dK177y/mis-kartoteka.git
-   cd mis-kartoteka
-   ```
-2. Создайте файл переменных окружения `.env` (в корневой папке) и пропишите туда доступы к базе данных:
-   ```env
-   DATABASE_URL="postgresql://user:pass@db:5432/mis_db"
-   PORT=80
-   GRAFANA_ADMIN_PASSWORD="super-secret-password"
-   ```
-3. Запустите контейнеры:
-   ```bash
-   docker compose up -d --build
-   ```
-4. Откройте браузер и перейдите по адресу `http://localhost`. При первом запуске система автоматически создаст таблицы в базе данных и предложит создать учетную запись администратора.
+**1. Клонируйте репозиторий на ваш сервер:**
+```bash
+git clone https://github.com/S4dK177y/mis-kartoteka.git
+cd mis-kartoteka
+```
+
+**2. Создайте файл конфигурации:**
+Системе нужны секретные данные (пароли, настройки базы данных). Скопируйте и создайте файл `.env`:
+```bash
+nano .env
+```
+Вставьте в открывшийся файл следующий шаблон (вы можете придумать и вписать **любые свои** пароли вместо предложенных):
+```env
+# URL для подключения к базе данных. 'db' - это внутреннее имя контейнера базы в docker-compose.
+# Замените 'user' на любой логин, а 'pass' на любой сложный пароль.
+DATABASE_URL="postgresql://user:pass@db:5432/mis_db"
+
+# Порт, на котором будет доступна система (80 - стандартный веб-порт)
+PORT=80
+
+# Пароль для входа в панель мониторинга Grafana (придумайте надежный пароль)
+GRAFANA_ADMIN_PASSWORD="super-secret-password"
+```
+Сохраните файл (в nano: `Ctrl+O`, `Enter`, затем `Ctrl+X`).
+
+**3. Запустите контейнеры:**
+Эта команда скачает нужные зависимости, соберет проект и запустит его в фоновом режиме:
+```bash
+docker compose up -d --build
+```
+
+**4. Инициализация системы:**
+Откройте браузер и перейдите по IP-адресу вашего сервера (или `http://localhost`, если запускаете на домашнем ПК). При первом входе система автоматически инициализирует базу данных и предложит создать первую учетную запись главного администратора.
