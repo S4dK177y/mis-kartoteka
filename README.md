@@ -35,7 +35,7 @@
 - [x] Миграция базы данных (SQLite -> PostgreSQL)
 - [x] Написание отказоустойчивой системы бэкапов (`pg_dump` + `psql`)
 - [x] Настройка CI/CD пайплайнов (GitHub Actions)
-- [ ] Внедрение систем мониторинга (Prometheus & Grafana)
+- [x] Внедрение систем мониторинга (Prometheus & Grafana)
 - [ ] Автоматизация тестирования (Jest/Supertest для API, Playwright для E2E)
 
 ## 🌍 Живая демонстрация (Live Demo)

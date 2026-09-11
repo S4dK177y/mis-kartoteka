@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
-import { Activity, Plus, Settings, LogOut, Download, Menu, X, Lock } from 'lucide-react';
+import { Activity, Plus, Settings, LogOut, Download, Menu, X, Lock, BarChart2 } from 'lucide-react';
 import { api } from './api';
 import PatientList from './pages/PatientList';
 import PatientForm from './pages/PatientForm';
@@ -72,6 +72,9 @@ const Header = () => {
                 <button onClick={() => { lock(); setMobileMenuOpen(false); }} className="btn btn-outline" style={{ border: 'none', color: 'var(--primary)' }} title="Заблокировать систему">
                   <Lock size={18} />
                 </button>
+                <a href={`${window.location.protocol}//${window.location.hostname}:3001`} target="_blank" rel="noopener noreferrer" className="btn btn-outline" style={{ border: 'none' }} title="Мониторинг (Grafana)" onClick={() => setMobileMenuOpen(false)}>
+                  <BarChart2 size={18} />
+                </a>
                 <Link to="/admin" className="btn btn-outline" style={{ border: 'none' }} title="Настройки системы" onClick={() => setMobileMenuOpen(false)}>
                   <Settings size={18} />
                 </Link>
