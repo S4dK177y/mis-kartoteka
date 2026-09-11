@@ -2,7 +2,7 @@
   <h1>🏥 МИС Картотека</h1>
 
   <p>
-    <a href="https://github.com/S4dK177y/mis-kartoteka/releases"><img src="https://img.shields.io/github/v/tag/S4dK177y/mis-kartoteka?color=blue&label=version" alt="GitHub Tag"></a>
+    <a href="https://github.com/S4dK177y/mis-kartoteka/releases"><img src="https://img.shields.io/badge/version-1.0.0-blue" alt="Version"></a>
     <img src="https://img.shields.io/badge/Status-In_Development-orange" alt="Status">
     <a href="https://github.com/S4dK177y/mis-kartoteka/actions/workflows/ci.yml"><img src="https://github.com/S4dK177y/mis-kartoteka/actions/workflows/ci.yml/badge.svg" alt="CI Pipeline"></a>
     <a href="https://github.com/S4dK177y/mis-kartoteka/actions/workflows/docker.yml"><img src="https://github.com/S4dK177y/mis-kartoteka/actions/workflows/docker.yml/badge.svg" alt="Docker Build"></a>
