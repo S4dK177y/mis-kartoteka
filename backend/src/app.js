@@ -19,6 +19,19 @@ const cryptoUtil = require('./utils/crypto');
 
 const app = express();
 
+// Prometheus Metrics Setup
+const promBundle = require('express-prom-bundle');
+const metricsMiddleware = promBundle({
+  includeMethod: true,
+  includePath: true,
+  includeStatusCode: true,
+  includeUp: true,
+  promClient: {
+    collectDefaultMetrics: {}
+  }
+});
+app.use(metricsMiddleware);
+
 // Middleware
 app.use(cors({ origin: true, credentials: true }));
 app.use(helmet({
