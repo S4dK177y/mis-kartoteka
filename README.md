@@ -2,6 +2,7 @@
 
 ![Status](https://img.shields.io/badge/Status-In_Development-orange)
 ![Version](https://img.shields.io/badge/Version-1.10.0-blue)
+[![CI Pipeline](https://github.com/S4dK177y/mis-kartoteka/actions/workflows/ci.yml/badge.svg)](https://github.com/S4dK177y/mis-kartoteka/actions/workflows/ci.yml)
 ![Stack](https://img.shields.io/badge/Stack-React%20%7C%20Node.js%20%7C%20PostgreSQL-brightgreen)
 ![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white)
 ![Antigravity](https://img.shields.io/badge/AI_Assisted-Antigravity_IDE-blueviolet?logo=google&logoColor=white)
@@ -33,7 +34,7 @@
 - [x] Контейнеризация (Multi-stage сборка Frontend, Nginx Reverse Proxy)
 - [x] Миграция базы данных (SQLite -> PostgreSQL)
 - [x] Написание отказоустойчивой системы бэкапов (`pg_dump` + `psql`)
-- [ ] Настройка CI/CD пайплайнов (GitHub Actions)
+- [x] Настройка CI/CD пайплайнов (GitHub Actions)
 - [ ] Внедрение систем мониторинга (Prometheus & Grafana)
 - [ ] Автоматизация тестирования (Jest/Supertest для API, Playwright для E2E)
 
