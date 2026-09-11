@@ -18,13 +18,13 @@ services:
       context: ./backend
     container_name: mis_backend
     ports:
-      - "${PORT}:${PORT}"
+      - "${PORT:-8080}:3000"
     volumes:
       - ./backend/data:/app/data
       - ./backend/backups:/app/backups
     environment:
       - NODE_ENV=production
-      - PORT=${PORT}
+      - PORT=3000
       - DATABASE_URL=${DATABASE_URL}
     restart: unless-stopped
     depends_on:
