@@ -1,7 +1,7 @@
 # 🏥 МИС Картотека
 
 ![Status](https://img.shields.io/badge/Status-In_Development-orange)
-![Version](https://img.shields.io/badge/Version-1.10.0-blue)
+[![GitHub Release](https://img.shields.io/github/v/release/S4dK177y/mis-kartoteka)](https://github.com/S4dK177y/mis-kartoteka/releases)
 [![CI Pipeline](https://github.com/S4dK177y/mis-kartoteka/actions/workflows/ci.yml/badge.svg)](https://github.com/S4dK177y/mis-kartoteka/actions/workflows/ci.yml)
 [![Docker Build](https://github.com/S4dK177y/mis-kartoteka/actions/workflows/docker.yml/badge.svg)](https://github.com/S4dK177y/mis-kartoteka/actions/workflows/docker.yml)
 ![Stack](https://img.shields.io/badge/Stack-React%20%7C%20Node.js%20%7C%20PostgreSQL-brightgreen)
