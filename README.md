@@ -81,9 +81,14 @@ nano .env
 ```
 Вставьте в открывшийся файл следующий шаблон (вы можете придумать и вписать **любые свои** пароли вместо предложенных):
 ```env
-# URL для подключения к базе данных. 'db' - это внутреннее имя контейнера базы в docker-compose.
-# Замените 'user' на любой логин, а 'pass' на любой сложный пароль.
-DATABASE_URL="postgresql://user:pass@db:5432/mis_db"
+# Данные для инициализации базы данных PostgreSQL (придумайте свои)
+POSTGRES_USER=admin
+POSTGRES_PASSWORD=super_secret_password_123
+POSTGRES_DB=mis_db
+
+# Строка подключения для Prisma ORM (должна совпадать с данными выше)
+# 'db' - это внутреннее имя контейнера базы в docker-compose
+DATABASE_URL="postgresql://admin:super_secret_password_123@db:5432/mis_db?schema=public"
 
 # Порт, на котором будет доступна система (80 - стандартный веб-порт)
 PORT=80
