@@ -7,7 +7,7 @@ test.describe('Authentication & Setup', () => {
     
     // Wait for any heading (h1 or h2) to ensure page is loaded
     await page.locator('h1, h2').first().waitFor();
-    let title = await page.locator('h1, h2').first().textContent();
+    let title = (await page.locator('h1, h2').first().textContent() || '').trim();
 
     // 1. Check if system needs encryption setup or unlock
     if (title === 'Инициализация защиты') {
@@ -16,13 +16,13 @@ test.describe('Authentication & Setup', () => {
       await page.getByRole('button', { name: 'Зашифровать данные' }).click();
       await page.waitForURL((url) => !url.href.includes('locked'), { timeout: 15000 });
       await page.locator('h1, h2').first().waitFor();
-      title = await page.locator('h1, h2').first().textContent();
+      title = (await page.locator('h1, h2').first().textContent() || '').trim();
     } else if (title === 'Система защищена') {
       await page.locator('input[type="password"]').first().fill('masterpass123');
       await page.getByRole('button', { name: 'Разблокировать систему' }).click();
       await page.waitForURL((url) => !url.href.includes('locked'), { timeout: 15000 });
       await page.locator('h1, h2').first().waitFor();
-      title = await page.locator('h1, h2').first().textContent();
+      title = (await page.locator('h1, h2').first().textContent() || '').trim();
     }
     
     // 2. Check if system needs user setup
@@ -33,7 +33,7 @@ test.describe('Authentication & Setup', () => {
       await page.getByRole('button', { name: 'Завершить настройку' }).click();
       await page.waitForTimeout(1000);
       await page.locator('h1, h2').first().waitFor();
-      title = await page.locator('h1, h2').first().textContent();
+      title = (await page.locator('h1, h2').first().textContent() || '').trim();
     }
     
     // 3. Login if required
