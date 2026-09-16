@@ -6,27 +6,39 @@ test.describe('Patients Management', () => {
     // In Playwright it's better to use auth state, but for simplicity we login manually.
     await page.goto('/');
     
-    // Wait for heading to ensure page is loaded
-    // Depending on state, it could be setup, login, or dashboard (if session persists)
-    await page.locator('h1').waitFor({ timeout: 10000 }).catch(() => {});
-    
-    const title = await page.locator('h1').textContent().catch(() => '');
+    await page.locator('h1, h2').first().waitFor({ timeout: 10000 }).catch(() => {});
+    let title = await page.locator('h1, h2').first().textContent().catch(() => '');
+
+    if (title === 'Инициализация защиты') {
+      await page.locator('input[type="password"]').first().fill('masterpass123');
+      await page.locator('input[type="password"]').nth(1).fill('masterpass123');
+      await page.getByRole('button', { name: 'Зашифровать данные' }).click();
+      await page.waitForTimeout(1000);
+      await page.locator('h1, h2').first().waitFor().catch(() => {});
+      title = await page.locator('h1, h2').first().textContent().catch(() => '');
+    } else if (title === 'Система защищена') {
+      await page.locator('input[type="password"]').first().fill('masterpass123');
+      await page.getByRole('button', { name: 'Разблокировать систему' }).click();
+      await page.waitForTimeout(1000);
+      await page.locator('h1, h2').first().waitFor().catch(() => {});
+      title = await page.locator('h1, h2').first().textContent().catch(() => '');
+    }
     
     if (title === 'Первый запуск') {
       await page.locator('input[type="text"]').fill('admin');
       await page.locator('input[type="password"]').first().fill('password123');
       await page.locator('input[type="password"]').nth(1).fill('password123');
       await page.getByRole('button', { name: 'Завершить настройку' }).click();
-      await page.locator('h1').waitFor();
+      await page.waitForTimeout(1000);
+      await page.locator('h1, h2').first().waitFor().catch(() => {});
+      title = await page.locator('h1, h2').first().textContent().catch(() => '');
     }
 
-    const newTitle = await page.locator('h1').textContent().catch(() => '');
-
-    if (newTitle === 'Вход в МИС') {
+    if (title === 'Вход в МИС') {
       await page.getByPlaceholder('Имя пользователя').fill('admin');
       await page.getByPlaceholder('••••••••').fill('password123');
       await page.getByRole('button', { name: 'Войти' }).click();
-      await page.waitForURL('**/');
+      await page.waitForURL('**/').catch(() => {});
     }
   });
 

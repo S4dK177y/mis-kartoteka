@@ -2,28 +2,42 @@ const { test, expect } = require('@playwright/test');
 
 test.describe('Authentication & Setup', () => {
   test('should setup system and login', async ({ page }) => {
-    // Navigate to the app. Since DB is empty, it should redirect to /setup
+    // Navigate to the app
     await page.goto('/');
     
-    // Wait for heading to ensure page is loaded
-    await page.locator('h1').waitFor();
-    const title = await page.locator('h1').textContent();
+    // Wait for any heading (h1 or h2) to ensure page is loaded
+    await page.locator('h1, h2').first().waitFor();
+    let title = await page.locator('h1, h2').first().textContent();
+
+    // 1. Check if system needs encryption setup or unlock
+    if (title === 'Инициализация защиты') {
+      await page.locator('input[type="password"]').first().fill('masterpass123');
+      await page.locator('input[type="password"]').nth(1).fill('masterpass123');
+      await page.getByRole('button', { name: 'Зашифровать данные' }).click();
+      await page.waitForTimeout(1000);
+      await page.locator('h1, h2').first().waitFor();
+      title = await page.locator('h1, h2').first().textContent();
+    } else if (title === 'Система защищена') {
+      await page.locator('input[type="password"]').first().fill('masterpass123');
+      await page.getByRole('button', { name: 'Разблокировать систему' }).click();
+      await page.waitForTimeout(1000);
+      await page.locator('h1, h2').first().waitFor();
+      title = await page.locator('h1, h2').first().textContent();
+    }
     
+    // 2. Check if system needs user setup
     if (title === 'Первый запуск') {
-      // Fill setup form
       await page.locator('input[type="text"]').fill('admin');
       await page.locator('input[type="password"]').first().fill('password123');
       await page.locator('input[type="password"]').nth(1).fill('password123');
       await page.getByRole('button', { name: 'Завершить настройку' }).click();
-
-      // After setup, wait for next page
-      await page.locator('h1').waitFor();
+      await page.waitForTimeout(1000);
+      await page.locator('h1, h2').first().waitFor();
+      title = await page.locator('h1, h2').first().textContent();
     }
     
-    const newTitle = await page.locator('h1').textContent();
-    
-    // If it requires login, we can login
-    if (newTitle === 'Вход в МИС') {
+    // 3. Login if required
+    if (title === 'Вход в МИС') {
       await page.getByPlaceholder('Имя пользователя').fill('admin');
       await page.getByPlaceholder('••••••••').fill('password123');
       await page.getByRole('button', { name: 'Войти' }).click();
