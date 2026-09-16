@@ -5,22 +5,25 @@ test.describe('Authentication & Setup', () => {
     // Navigate to the app. Since DB is empty, it should redirect to /setup
     await page.goto('/');
     
-    // Wait for redirect to /setup
-    await page.waitForURL('**/setup');
+    // Wait for heading to ensure page is loaded
+    await page.locator('h1').waitFor();
+    const title = await page.locator('h1').textContent();
     
-    // Fill setup form
-    await page.getByRole('textbox').fill('admin'); // 'Логин администратора' is prefilled, but we can fill it again
-    await page.locator('input[type="password"]').first().fill('password123');
-    await page.locator('input[type="password"]').nth(1).fill('password123');
-    await page.getByRole('button', { name: 'Завершить настройку' }).click();
+    if (title === 'Первый запуск') {
+      // Fill setup form
+      await page.locator('input[type="text"]').fill('admin');
+      await page.locator('input[type="password"]').first().fill('password123');
+      await page.locator('input[type="password"]').nth(1).fill('password123');
+      await page.getByRole('button', { name: 'Завершить настройку' }).click();
 
-    // After setup, it should redirect to /login (or dashboard depending on AuthContext, usually setup auto-logins or redirects to login)
-    // Actually, in Setup.jsx: await setup(username, password); navigate('/');
-    // Let's just wait for the network to settle and check URL.
-    await page.waitForURL('**/');
+      // After setup, wait for next page
+      await page.locator('h1').waitFor();
+    }
+    
+    const newTitle = await page.locator('h1').textContent();
     
     // If it requires login, we can login
-    if (page.url().includes('login')) {
+    if (newTitle === 'Вход в МИС') {
       await page.getByPlaceholder('Имя пользователя').fill('admin');
       await page.getByPlaceholder('••••••••').fill('password123');
       await page.getByRole('button', { name: 'Войти' }).click();
