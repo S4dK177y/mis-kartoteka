@@ -1,9 +1,20 @@
 const request = require('supertest');
 const app = require('../app');
 const prisma = require('../utils/prisma');
-const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 const { JWT_SECRET } = require('../middlewares/auth');
+
+// Mock crypto module to bypass GOST encryption and lock checks during API testing
+jest.mock('../utils/crypto', () => ({
+  isInitialized: () => true,
+  isUnlocked: () => true,
+  encryptText: (t) => t,
+  decryptText: (t) => t,
+  encryptDeterministic: (t) => t,
+  encryptBufferAsync: async (b) => b,
+  decryptBufferAsync: async (b) => b,
+}));
 
 describe('Patients API', () => {
   let token = null;
