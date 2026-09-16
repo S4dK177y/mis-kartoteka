@@ -144,13 +144,15 @@ const cleanLogs = async () => {
     console.error('Error cleaning logs:', err);
   }
 };
-setInterval(cleanLogs, 1000 * 60 * 60);
+if (process.env.NODE_ENV !== 'test') {
+  setInterval(cleanLogs, 1000 * 60 * 60);
 
-// Run initial startup tasks
-setTimeout(() => {
-  cleanLogs();
-  backupController.initScheduledBackups();
-}, 10000);
+  // Run initial startup tasks
+  setTimeout(() => {
+    cleanLogs();
+    backupController.initScheduledBackups();
+  }, 10000);
+}
 
 // Serve Frontend Static Files
 const frontendDistPath = path.join(__dirname, '..', '..', 'frontend', 'dist');
