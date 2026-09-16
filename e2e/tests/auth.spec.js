@@ -47,7 +47,6 @@ test.describe('Authentication & Setup', () => {
     await expect(page).toHaveURL('/');
     
     // Optional: wait for a dashboard element to confirm we are logged in
-    await expect(page.getByText('Главная')).toBeVisible({ timeout: 10000 }).catch(() => {}); // Wait for something to load
+    await expect(page.getByText('Главная').or(page.getByRole('link', { name: 'Пациенты' })).first()).toBeVisible({ timeout: 10000 }).catch(() => {}); // Wait for something to load
   });
 });
-

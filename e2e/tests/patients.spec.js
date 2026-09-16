@@ -3,7 +3,6 @@ const { test, expect } = require('@playwright/test');
 test.describe('Patients Management', () => {
   test.beforeEach(async ({ page }) => {
     // Login before each test. Assuming setup is already done by auth.spec.js or we do it if needed.
-    // In Playwright it's better to use auth state, but for simplicity we login manually.
     await page.goto('/');
     
     await page.locator('h1, h2').first().waitFor({ timeout: 10000 }).catch(() => {});
